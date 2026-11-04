@@ -1,0 +1,10 @@
+node_modules
+.nuxt
+.output
+.data
+bin/
+downloads/
+*.log
+
+pakage-lock.json
+

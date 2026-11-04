@@ -1,0 +1,80 @@
+:root {
+  --bg: #000;
+  --panel: #121212;
+  --elevated: #1f1f1f;
+  --highlight: #2a2a2a;
+  --text: #fff;
+  --subdued: #b3b3b3;
+  --muted: #8c8c8c; /* contraste 5,4:1 no fundo do app (antes 4,4:1, abaixo do mínimo 4,5:1) */
+  --green: #1ed760;
+  --green-hover: #3be477;
+  --red: #f3727f;
+  --radius: 8px;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #__nuxt { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Figtree Variable', 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+input, select { font: inherit; color: inherit; }
+a { color: inherit; text-decoration: none; }
+
+::-webkit-scrollbar { width: 12px; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .25); border: 3px solid transparent; background-clip: padding-box; border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, .45); }
+
+.icon { width: 24px; height: 24px; flex: none; }
+
+.btn-green {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--green); color: #000; border-radius: 999px;
+  font-weight: 700; transition: transform .1s, background .15s;
+}
+.btn-green:hover { background: var(--green-hover); transform: scale(1.04); }
+.btn-green:active { transform: scale(1); }
+.btn-green:disabled { opacity: .5; transform: none; cursor: not-allowed; }
+
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid #7c7c7c; border-radius: 999px; padding: 6px 16px;
+  font-size: 14px; font-weight: 700; transition: border-color .15s, transform .1s;
+}
+.btn-ghost:hover { border-color: #fff; transform: scale(1.04); }
+
+.chip {
+  padding: 6px 12px; border-radius: 999px; background: rgba(255, 255, 255, .07);
+  font-size: 14px; font-weight: 500; transition: background .15s; white-space: nowrap;
+}
+.chip:hover { background: rgba(255, 255, 255, .12); }
+.chip.active { background: #fff; color: #000; }
+
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin .9s linear infinite; }
+
+/* linha da música que está tocando, depois de clicar nela no player */
+.flash { animation: flash 1.8s ease-out; }
+@keyframes flash {
+  0%, 30% { background: rgba(10, 237, 124, .28); box-shadow: inset 3px 0 0 #0aed7c; }
+  100% { background: transparent; box-shadow: inset 3px 0 0 transparent; }
+}
+
+/* navegação pelo teclado (Tab): mostra onde está o foco — só no teclado, não no clique */
+:focus-visible { outline: 2px solid #0aed7c; outline-offset: 2px; border-radius: 4px; }
+input:focus-visible, textarea:focus-visible { outline-offset: 0; }
+
+/* quem pediu menos animação no sistema: sem piscar, sem rolagem animada */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
