@@ -194,6 +194,8 @@ const shownTracks = computed(() => {
 interface CheckResult {
   /** id da faixa -> formato -> caminho do arquivo que já existe */
   existing: Record<string, Record<string, string>>
+  /** id da faixa -> todos os formatos que já existem no disco (qualquer formato, não só os escolhidos) */
+  have?: Record<string, string[]>
   /** downloads anteriores deste mesmo link que ficaram pela metade */
   resumable: { id: string, format: string, title: string, done: number, total: number }[]
 }
@@ -204,7 +206,8 @@ const existingFor = (id: string) => formatKeys.value.filter(f => check.value?.ex
 /** faixas que já existem em TODOS os formatos escolhidos */
 const fullyDownloaded = computed(() => (info.value?.tracks ?? []).filter(t => existingFor(t.id).length === formatKeys.value.length))
 const partlyDownloaded = computed(() => (info.value?.tracks ?? []).filter(t => existingFor(t.id).length > 0))
-const existingMap = computed(() => (check.value ? Object.fromEntries((info.value?.tracks ?? []).map(t => [t.id, existingFor(t.id)])) : undefined))
+// selo "✓ MP4" na lista: todo formato já baixado, mesmo que não seja o escolhido agora
+const existingMap = computed(() => (check.value ? Object.fromEntries((info.value?.tracks ?? []).map(t => [t.id, check.value!.have?.[t.id] ?? existingFor(t.id)])) : undefined))
 
 let checkSeq = 0
 async function runCheck() {

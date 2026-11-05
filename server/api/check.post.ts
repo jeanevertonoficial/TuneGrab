@@ -1,5 +1,5 @@
 import { existingFile } from '../utils/downloaded'
-import { listJobs } from '../utils/jobs'
+import { FORMATS, listJobs } from '../utils/jobs'
 
 /**
  * Antes de baixar: o que desse link já existe no disco (por formato)
@@ -15,6 +15,13 @@ export default defineEventHandler(async (event) => {
       const path = existingFile(id, f)
       if (path) (existing[id] ??= {})[f] = path
     }
+  }
+
+  // em QUALQUER formato (não só nos escolhidos agora): a lista mostra "✓ MP4" mesmo com MP3 selecionado
+  const have: Record<string, string[]> = {}
+  for (const id of tracks.slice(0, 5000)) {
+    const fs = Object.keys(FORMATS).filter(f => existingFile(id, f))
+    if (fs.length) have[id] = fs
   }
 
   // downloads parados (cancelados ou interrompidos) do mesmo link / mesmas faixas
@@ -36,5 +43,5 @@ export default defineEventHandler(async (event) => {
     .map(({ job: j, left }) => ({ id: j.id, format: j.format, title: j.title, done: j.items.length - left, total: j.items.length }))
     .slice(0, 3)
 
-  return { existing, resumable }
+  return { existing, have, resumable }
 })
