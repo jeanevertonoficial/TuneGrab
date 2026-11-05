@@ -1,6 +1,6 @@
 {
   "name": "tunegrab",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "type": "module",
   "description": "Player e organizador de música para Windows: salva no pendrive, importa listas do Spotify/Deezer e ouve com letra sincronizada.",
