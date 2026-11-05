@@ -244,8 +244,8 @@ function playAll(shuffled = false) {
 /* ordenar dentro do campo: separado por uma linha fina */
 .sort { flex: none; display: flex; align-items: center; height: 28px; margin-right: -8px; padding-left: 8px; border-left: 1px solid rgba(255, 255, 255, .14); }
 
-.hero { display: flex; align-items: flex-end; gap: 24px; padding: 40px 24px 24px; background: linear-gradient(#4b2fa6, #121212); }
-.cover { width: 192px; height: 192px; border-radius: 6px; display: grid; place-items: center; background: linear-gradient(135deg, #450af5, #c4efd9); color: #fff; box-shadow: 0 4px 60px rgba(0, 0, 0, .5); flex: none; }
+.hero { display: flex; align-items: flex-end; gap: 24px; padding: 40px 24px 24px; background: linear-gradient(#0b5e38, #121212); }
+.cover { width: 192px; height: 192px; border-radius: 6px; display: grid; place-items: center; background: linear-gradient(135deg, #0aed7c, #03532e); color: #fff; box-shadow: 0 4px 60px rgba(0, 0, 0, .5); flex: none; }
 .info { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .kind { font-size: 14px; font-weight: 500; }
 h1 { margin: 0; font-size: clamp(32px, 5vw, 72px); font-weight: 800; letter-spacing: -2px; line-height: 1.05; }

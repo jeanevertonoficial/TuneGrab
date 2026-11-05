@@ -137,11 +137,11 @@ function when(ts: number) {
 .search input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; font-size: 15px; }
 
 .hero { display: flex; align-items: flex-end; gap: 24px; padding: 40px 24px 24px; }
-.hero.favorites { background: linear-gradient(#5038a0, #121212); }
+.hero.favorites { background: linear-gradient(#0b5e38, #121212); }
 .hero.recent { background: linear-gradient(#1e5f74, #121212); }
 .cover { width: 192px; height: 192px; border-radius: 6px; display: grid; place-items: center; color: #fff; box-shadow: 0 4px 60px rgba(0, 0, 0, .5); flex: none; }
-.favorites .cover { background: linear-gradient(135deg, #450af5, #c4efd9); }
-.recent .cover { background: linear-gradient(135deg, #0d73ec, #1ed760); }
+.favorites .cover { background: linear-gradient(135deg, #0aed7c, #03532e); }
+.recent .cover { background: linear-gradient(135deg, #0d73ec, #0aed7c); }
 .info { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .kind { font-size: 14px; font-weight: 500; }
 h1 { margin: 0; font-size: clamp(32px, 5vw, 72px); font-weight: 800; letter-spacing: -2px; line-height: 1.05; }

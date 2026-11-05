@@ -665,7 +665,7 @@ const kindLabel = computed(() => {
       </p>
       <div class="cards">
         <button class="card" @click="paste">
-          <span class="card-icon" style="--c: #1ed760"><Icon name="link" :size="28" /></span>
+          <span class="card-icon" style="--c: #0aed7c"><Icon name="link" :size="28" /></span>
           <strong>Colar da área de transferência</strong>
           <span>Lê o link copiado e já busca</span>
         </button>
@@ -828,7 +828,7 @@ const kindLabel = computed(() => {
 .q-item:hover { background: rgba(255, 255, 255, .16); }
 .q-item.off { opacity: .45; cursor: default; }
 .q-cover { width: 56px; height: 56px; object-fit: cover; flex: none; display: grid; place-items: center; }
-.q-cover.fav { background: linear-gradient(135deg, #450af5, #c4efd9); }
+.q-cover.fav { background: linear-gradient(135deg, #0aed7c, #03532e); }
 .q-cover.none { background: #333; color: var(--muted); }
 .q-item strong { flex: 1; min-width: 0; font-size: 14px; }
 .q-play {

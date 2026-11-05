@@ -3,17 +3,29 @@ import { runYtdlp } from '../utils/ytdlp'
 
 /**
  * Canal do YouTube de um artista, pelo nome (usado no cabeçalho da pasta do artista):
- * foto do canal, link e inscritos. Só aceita canal com o nome EXATO (ignorando acentos/maiúsculas
- * e o "- Topic"); entre homônimos, o de mais inscritos. Guardado 30 dias ("não achei": 1 dia).
+ * foto do canal, link e inscritos. Só aceita canal com o mesmo nome (ignorando acentos/maiúsculas,
+ * o "- Topic" e títulos como "Pr"/"Oficial"); entre homônimos, o verificado e depois o de mais
+ * inscritos. Guardado 30 dias ("não achei": 1 dia).
  */
 interface Artist { id: string, name: string, url: string, avatar: string | null, subscribers: number | null }
 
-const store = jsonStore<Record<string, { at: number, value: Artist | null }>>('artists', {})
+const store = jsonStore<Record<string, { at: number, value: Artist | null }>>('artists-v2', {}) // v2: escolha nova (verificado primeiro)
 const HIT_TTL = 1000 * 60 * 60 * 24 * 30
 const MISS_TTL = 1000 * 60 * 60 * 24
 
 const norm = (s: string) => s.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
   .replace(/\s*-\s*topic$/, '').replace(/vevo$/, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+
+/** títulos que vêm antes do nome no canal oficial ("Pr Marcus Salles", "Ministério X", "Banda X") */
+const PREFIX = /^(?:pr|pra|pastor|pastora|ap|apostolo|bispo|bispa|missionario|missionaria|cantor|cantora|banda|ministerio|dj|mc|padre|irma|irmao)\s+/
+/** "oficial"/"official" no fim do nome do canal */
+const SUFFIX = /\s+(?:oficial|official|music|musica)$/
+
+/** o canal é deste artista: mesmo nome, aceitando um título antes ou "Oficial" depois */
+function sameArtist(channel: string, key: string) {
+  const n = norm(channel)
+  return n === key || n.replace(PREFIX, '').replace(SUFFIX, '') === key.replace(PREFIX, '').replace(SUFFIX, '')
+}
 
 export default defineEventHandler(async (event) => {
   const name = String(getQuery(event).name ?? '').trim().slice(0, 100)
@@ -27,8 +39,10 @@ export default defineEventHandler(async (event) => {
     const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(name)}&sp=EgIQAg%253D%253D` // filtro: canais
     const raw = JSON.parse(await runYtdlp(['-J', '--flat-playlist', '--playlist-end', '8', url]))
     const best = ((raw.entries ?? []) as any[])
-      .filter(e => e?.id && norm(e.title || e.channel || '') === key && !/ - topic$/i.test(e.title ?? ''))
-      .sort((a, b) => (b.channel_follower_count ?? 0) - (a.channel_follower_count ?? 0))[0]
+      .filter(e => e?.id && !/ - topic$/i.test(e.title ?? '') && sameArtist(e.title || e.channel || '', key))
+      // homônimos são comuns (fã-clubes, contas pessoais): o verificado primeiro, depois o de mais inscritos
+      .sort((a, b) => Number(!!b.channel_is_verified) - Number(!!a.channel_is_verified)
+        || (b.channel_follower_count ?? 0) - (a.channel_follower_count ?? 0))[0]
     if (best) {
       const thumb = (best.thumbnails ?? []).at(-1)?.url as string | undefined
       value = {

@@ -93,20 +93,20 @@ function later() {
   box-shadow: 0 16px 40px rgba(0, 0, 0, .6); animation: up .2s ease-out;
 }
 @keyframes up { from { opacity: 0; transform: translate(-50%, 8px); } }
-.ic { color: var(--green, #1ed760); flex: none; }
+.ic { color: var(--green, #0aed7c); flex: none; }
 .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
 .txt b { font-size: 14px; }
 .txt small { font-weight: 400; color: var(--subdued, #a7a7a7); }
 .txt span { color: var(--subdued, #a7a7a7); }
 .txt .err { color: var(--red, #f15e6c); }
 .bar { display: block; height: 4px; border-radius: 2px; background: #3a3a3a; overflow: hidden; margin-top: 4px; }
-.bar i { display: block; height: 100%; background: var(--green, #1ed760); transition: width .2s; }
+.bar i { display: block; height: 100%; background: var(--green, #0aed7c); transition: width .2s; }
 .notes { font-size: 13px; color: var(--subdued, #a7a7a7); text-decoration: underline; flex: none; }
 .notes:hover { color: #fff; }
 .later, .go { flex: none; padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 700; }
 .later { color: #fff; border: 1px solid #555; }
 .later:hover { border-color: #fff; }
-.go { background: var(--green, #1ed760); color: #000; }
+.go { background: var(--green, #0aed7c); color: #000; }
 .go:hover { filter: brightness(1.08); }
 @media (max-width: 640px) { .notes { display: none; } }
 </style>

@@ -15,9 +15,9 @@ const shownPlaylists = computed(() => (showAll.value ? playlists.value : playlis
 const broken = reactive(new Set<string>())
 
 const fixed = [
-  { id: 'LL', title: 'Músicas curtidas', url: 'https://www.youtube.com/playlist?list=LL', icon: 'heart', color: 'linear-gradient(135deg, #450af5, #c4efd9)' },
+  { id: 'LL', title: 'Músicas curtidas', url: 'https://www.youtube.com/playlist?list=LL', icon: 'heart', color: 'linear-gradient(135deg, #0aed7c, #03532e)' },
   { id: 'WL', title: 'Assistir mais tarde', url: 'https://www.youtube.com/playlist?list=WL', icon: 'clock', color: 'linear-gradient(135deg, #e8115b, #ff9900)' },
-  { id: 'subs', title: 'Inscrições', url: 'https://www.youtube.com/feed/subscriptions', icon: 'library', color: 'linear-gradient(135deg, #0d73ec, #1ed760)' },
+  { id: 'subs', title: 'Inscrições', url: 'https://www.youtube.com/feed/subscriptions', icon: 'library', color: 'linear-gradient(135deg, #0d73ec, #0aed7c)' },
 ]
 
 const menu = [

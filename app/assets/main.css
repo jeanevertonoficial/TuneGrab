@@ -6,8 +6,8 @@
   --text: #fff;
   --subdued: #b3b3b3;
   --muted: #8c8c8c; /* contraste 5,4:1 no fundo do app (antes 4,4:1, abaixo do mínimo 4,5:1) */
-  --green: #1ed760;
-  --green-hover: #3be477;
+  --green: #0aed7c; /* verde da logo (o antigo #1ed760 era o verde oficial do Spotify) */
+  --green-hover: #4ef5a0;
   --red: #f3727f;
   --radius: 8px;
 }

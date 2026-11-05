@@ -163,21 +163,100 @@ const artist = ref<Artist | null>(null)
 const avatarBroken = ref(false)
 const plain = (s: string) => s.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
 
-/** é pasta de artista se as músicas dela têm o nome da pasta (no título, artista ou arquivo) */
-const artistName = computed(() => {
+/**
+ * Palavras que não fazem parte do nome do artista em nomes de pasta como
+ * "Marcus Salles_VIDEO", "Gabriela Rocha - MP3" ou "Top 10 Músicas Ao Vivo - Gabriela Rocha".
+ */
+const NOISE = '(?:top \\d+|\\d+ (?:melhores|mais tocadas)|as melhores|mais tocadas|melhores|sucessos|hits|coletanea|colecao|ao vivo|live|acustico|videos?|videoclipes?|clipes?|musicas?|mp3|mp4|m4a|flac|audios?|louvores?|playlist|album|discografia|completa|nov[oa]s?|antig[oa]s?|\\d{4})'
+const NOISE_EDGE = new RegExp(`^${NOISE}(?: |$)|(?:^| )${NOISE}$`)
+
+/** tira as palavras de ruído só nas pontas: "aline barros ao vivo" → "aline barros" */
+function trimNoise(s: string) {
+  let prev
+  do { prev = s; s = s.replace(NOISE_EDGE, '').trim() } while (s !== prev)
+  return s
+}
+
+/** nomes de artista possíveis (já normalizados) tirados do nome da pasta, do mais completo para as partes */
+function nameCandidates(folder: string) {
+  const out: string[] = []
+  const add = (s: string) => {
+    const name = trimNoise(plain(s))
+    if (name.length >= 3 && !out.includes(name)) out.push(name)
+  }
+  add(folder)
+  for (const part of folder.split(/\s+[-–—|]\s+|_+|[()[\]]/)) add(part)
+  return out
+}
+
+/**
+ * É pasta de artista se as músicas dela têm o nome da pasta (ou uma parte dele) no título,
+ * artista ou arquivo, ou se as subpastas levam esse nome (a pasta geral "Gabriela Rocha" com
+ * "Top 10 Músicas Ao Vivo - Gabriela Rocha" dentro). Devolve os nomes a procurar no YouTube,
+ * do mais provável ao menos.
+ */
+const artistNames = computed(() => {
   const l = listing.value
-  const name = title.value
-  if (!l?.parent || !name || plain(name).length < 3 || !files.value.length) return null
-  const key = plain(name)
-  const hits = files.value.filter(f => [f.title, f.artist, f.name].some(v => v && plain(v).includes(key))).length
-  return hits >= Math.min(2, files.value.length) ? name : null
+  const total = files.value.length + (l?.folders.length ?? 0)
+  if (!l?.parent || !title.value || !total) return [] as string[]
+  const need = Math.min(2, total)
+  const names: string[] = []
+  for (const key of nameCandidates(title.value)) {
+    const matching = files.value.filter(f => [f.title, f.artist, f.name].some(v => v && plain(v).includes(key)))
+    const subfolders = l.folders.filter(f => plain(f.name).includes(key)).length
+    if (matching.length + subfolders < need) continue
+    if (!names.includes(key)) names.push(key)
+    // a tag "artista" das músicas às vezes traz o nome do canal ("Pr Marcus Salles")
+    const tags = new Map<string, number>()
+    for (const f of matching) if (f.artist && plain(f.artist).includes(key)) tags.set(f.artist, (tags.get(f.artist) ?? 0) + 1)
+    const tag = [...tags].sort((a, b) => b[1] - a[1])[0]?.[0]
+    if (tag && !names.some(n => plain(n) === plain(tag))) names.push(tag)
+  }
+  return names.slice(0, 3)
 })
-watch(artistName, async (name) => {
+
+/**
+ * Pasta de álbum/show ("30 Anos Na Casa (Ao Vivo)", "Toto IV"): o nome da pasta não traz o
+ * artista, mas quase todas as músicas são do mesmo (pela tag "artista", separando parcerias
+ * como "Thalles Roberto e Gabriela Rocha"). Só pastas soltas de músicas, não as gerais.
+ */
+const albumArtist = computed(() => {
+  const l = listing.value
+  const list = files.value.filter(f => f.artist)
+  if (!l?.parent || !list.length || list.length < files.value.length * 0.6) return null
+  const count = new Map<string, { n: number, label: string }>()
+  for (const f of list) {
+    const full = f.artist!.trim()
+    const pieces = new Set([plain(full), ...full.split(/\s*(?:,|&|;|\/|\bfeat\.?|\bft\.?|\bpart\.?|\bcom\b|\be\b|\bx\b)\s*/i).map(plain)])
+    for (const p of pieces) {
+      if (p.length < 2) continue
+      const c = count.get(p) ?? { n: 0, label: p }
+      c.n++
+      count.set(p, c)
+    }
+  }
+  // o mais frequente; no empate, o nome mais longo ("zeze di camargo e luciano" antes de "luciano")
+  const best = [...count.values()].sort((a, b) => b.n - a.n || b.label.length - a.label.length)[0]
+  return best && best.n >= Math.max(1, Math.ceil(files.value.length * 0.6)) ? best.label : null
+})
+
+/** se o artista veio do nome da pasta ("Artista · pasta") ou só das músicas dela ("Álbum · pasta") */
+const artistFromFolder = ref(true)
+const lookups = computed(() => {
+  const out = artistNames.value.map(name => ({ name, fromFolder: true }))
+  const a = albumArtist.value
+  if (a && !out.some(o => o.name === a)) out.push({ name: a, fromFolder: false })
+  return out
+})
+const artistKey = computed(() => lookups.value.map(o => o.name).join('|'))
+watch(artistKey, async (key) => {
   artist.value = null
   avatarBroken.value = false
-  if (!name) return
-  const found = await $fetch<Artist | null>('/api/artist', { query: { name } }).catch(() => null)
-  if (artistName.value === name) artist.value = found
+  for (const { name, fromFolder } of lookups.value) {
+    const found = await $fetch<Artist | null>('/api/artist', { query: { name } }).catch(() => null)
+    if (artistKey.value !== key) return // trocou de pasta no meio
+    if (found) { artistFromFolder.value = fromFolder; artist.value = found; return }
+  }
 }, { immediate: true })
 
 const formatSubs = (n: number) => n >= 1e6 ? `${(n / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} mi` : n >= 1e3 ? `${Math.round(n / 1e3)} mil` : String(n)
@@ -248,7 +327,8 @@ const usedPct = computed(() => {
         </div>
         <div class="hero-info">
           <span class="kind">
-            <template v-if="artist"><Icon name="check" :size="14" class="verified" /> Artista · pasta</template>
+            <template v-if="artist && artistFromFolder"><Icon name="check" :size="14" class="verified" /> Artista · pasta</template>
+            <template v-else-if="artist"><Icon name="check" :size="14" class="verified" /> Pasta · {{ artist.name }}</template>
             <template v-else>{{ listing.parent ? 'Pasta' : { removable: 'Pendrive', disk: 'Disco', network: 'Unidade de rede', folder: 'Pasta' }[listing.location?.kind ?? 'folder'] }}</template>
           </span>
           <h1 class="ellipsis">{{ title }}</h1>
@@ -344,7 +424,7 @@ const usedPct = computed(() => {
 .dev.folder .meter { display: none; }
 .dev:hover { background: var(--highlight); }
 .dev-icon { width: 100%; aspect-ratio: 1.4; border-radius: 6px; display: grid; place-items: center; background: linear-gradient(135deg, #3a3a3a, #232323); color: #bbb; margin-bottom: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, .4); }
-.dev.removable .dev-icon { background: linear-gradient(135deg, #1ed760, #0f7a37); color: #000; }
+.dev.removable .dev-icon { background: linear-gradient(135deg, #0aed7c, #067a42); color: #000; }
 .dev.folder .dev-icon { background: linear-gradient(135deg, #5038a0, #2a1f57); color: #e8dfff; }
 .dev.network .dev-icon { background: linear-gradient(135deg, #0d73ec, #083e80); color: #fff; }
 .dev-sub { font-size: 13px; color: var(--subdued); }
@@ -358,7 +438,7 @@ const usedPct = computed(() => {
 
 .hero { display: flex; align-items: flex-end; gap: 24px; padding: 40px 24px 24px; background: linear-gradient(#3d3d3d, #121212); }
 .hero-icon { width: 192px; height: 192px; flex: none; border-radius: 6px; display: grid; place-items: center; background: linear-gradient(135deg, #5038a0, #2a1f57); color: #e8dfff; box-shadow: 0 4px 60px rgba(0, 0, 0, .5); }
-.hero-icon.removable { background: linear-gradient(135deg, #1ed760, #0f7a37); color: #000; }
+.hero-icon.removable { background: linear-gradient(135deg, #0aed7c, #067a42); color: #000; }
 .hero-icon.disk { background: linear-gradient(135deg, #535353, #282828); color: #ddd; }
 .hero-icon.network { background: linear-gradient(135deg, #0d73ec, #083e80); color: #fff; }
 /* pasta de artista: foto do canal redonda, como a página de artista */

@@ -231,8 +231,8 @@ const devices = computed(() => locations.value.filter(l => l.kind !== 'folder'))
 .nav-item small { margin-left: auto; font-size: 12px; color: var(--muted); font-weight: 600; }
 .nav-sep { height: 1px; background: #282828; margin: 6px 12px; }
 .nav-badge { width: 24px; height: 24px; border-radius: 4px; display: grid; place-items: center; flex: none; }
-.nav-badge.fav { background: linear-gradient(135deg, #450af5, #c4efd9); }
-.nav-badge.rec { background: linear-gradient(135deg, #0d73ec, #1ed760); color: #fff; }
+.nav-badge.fav { background: linear-gradient(135deg, #0aed7c, #03532e); }
+.nav-badge.rec { background: linear-gradient(135deg, #0d73ec, #0aed7c); color: #fff; }
 
 .library { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
 .lib-head { display: flex; align-items: center; gap: 12px; padding: 16px 24px 8px; color: var(--subdued); font-weight: 700; }
