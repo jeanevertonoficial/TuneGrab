@@ -13,6 +13,7 @@
   <a href="https://github.com/jeanevertonoficial/TuneGrab/releases/latest/download/TuneGrab-Setup.exe"><b>⬇️ Baixar para Windows</b></a>
   &nbsp;·&nbsp; <a href="README.en.md">English</a>
   &nbsp;·&nbsp; <a href="#aviso-legal">Aviso legal</a>
+  &nbsp;·&nbsp; <a href="#política-de-assinatura-de-código-code-signing-policy">Code signing policy</a>
 </p>
 
 <p align="center">
@@ -38,6 +39,7 @@
 - [Estrutura do código](#estrutura-do-código)
 - [Contribuir](#contribuir)
 - [Créditos e licença](#créditos-e-licença)
+- [Política de assinatura de código (Code signing policy)](#política-de-assinatura-de-código-code-signing-policy)
 - [Aviso legal](#aviso-legal)
 
 ---
@@ -279,6 +281,29 @@ Com a conta conectada:
 Para usar pelo celular (na mesma rede Wi-Fi) é preciso, antes, uma **senha de acesso** (sem ela qualquer pessoa da rede
 poderia mexer nos seus arquivos) e **HTTPS** (o celular só instala o app e toca em segundo plano com conexão segura).
 Esse é o próximo passo planejado.
+
+## Política de assinatura de código (Code signing policy)
+
+Assinatura de código gratuita fornecida pela [SignPath.io](https://about.signpath.io), certificado da [SignPath Foundation](https://signpath.org).
+*Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).*
+
+> Situação: pedido de adesão ao programa de código aberto da SignPath Foundation em andamento. Até a aprovação,
+> o instalador sai sem assinatura (o Windows mostra "editor desconhecido").
+
+- O instalador é gerado **nos servidores do GitHub** a partir deste repositório ([workflow](.github/workflows/instalador.yml)),
+  e só é assinado depois de **aprovação manual** de cada versão.
+- Autor, revisor e aprovador / Committers, reviewers and approvers: [Jean Everton](https://github.com/jeanevertonoficial) (mantenedor / maintainer)
+- Componentes de terceiros (FFmpeg, yt-dlp, Electron) vão dentro do instalador como publicados pelos seus projetos — veja
+  [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
+### Política de privacidade (Privacy policy)
+
+Este programa não envia nenhuma informação para outros sistemas em rede, a não ser quando pedido por quem o usa.
+Ele só se conecta, a partir das ações da pessoa, ao **YouTube** (busca, ouvir, baixar, login opcional), ao **Spotify** e à
+**Deezer** (ler a lista de uma playlist colada) e ao **LRCLIB** (letras). A única conexão automática é a **procura de
+atualizações no GitHub** (ao abrir e a cada 6 horas), que não envia dados pessoais e pode ser desligada no menu do ícone
+perto do relógio (**Procurar atualizações sozinho**). Nada é enviado a servidores do TuneGrab — eles não existem.
+Valem também as políticas de privacidade desses serviços quando você os usa.
 
 ## Seus dados e privacidade
 

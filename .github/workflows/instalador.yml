@@ -1,0 +1,102 @@
+# Gera o instalador do TuneGrab nos servidores do GitHub (build verificável a partir do código),
+# assina pelo SignPath (quando configurado) e publica a release.
+#
+# - Ao enviar uma tag "v1.2.3" (npm run release): gera, assina e publica a release v1.2.3.
+# - Pela aba Actions ("Run workflow"): só gera o instalador, para testar (fica em "Artifacts").
+#
+# Assinatura gratuita para código aberto: SignPath Foundation. Para ligar, cadastre no repositório
+# (Settings → Secrets and variables → Actions):
+#   secret   SIGNPATH_API_TOKEN
+#   variável SIGNPATH_ORGANIZATION_ID
+#   variável SIGNPATH_PROJECT_SLUG          (ex.: TuneGrab)
+#   variável SIGNPATH_SIGNING_POLICY_SLUG   (ex.: release-signing)
+# Sem isso o instalador sai sem assinatura, como antes.
+name: Instalador
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Dependências (também baixa o yt-dlp)
+        run: npm ci
+
+      - name: Gerar o instalador
+        run: npm run dist -- --publish never
+
+      - name: Separar o instalador
+        id: exe
+        shell: pwsh
+        run: |
+          $v = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$v") { throw "A tag $env:GITHUB_REF_NAME não bate com a versão $v do package.json" }
+          New-Item -ItemType Directory -Force out | Out-Null
+          Copy-Item "release/TuneGrab-Setup-$v.exe" out/TuneGrab-Setup.exe
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Enviar para assinar (sem assinatura)
+        id: unsigned
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: TuneGrab-Setup-sem-assinatura
+          path: out/TuneGrab-Setup.exe
+          if-no-files-found: error
+
+      - name: Assinar (SignPath Foundation)
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          connector-url: https://githubactions.connectors.signpath.io
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed
+
+      - name: Usar o instalador assinado
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        shell: pwsh
+        run: |
+          Copy-Item signed/TuneGrab-Setup.exe out/TuneGrab-Setup.exe -Force
+          Get-AuthenticodeSignature out/TuneGrab-Setup.exe | Format-List Status, SignerCertificate
+
+      # conferência que o app usa antes de instalar uma atualização (calculada sobre o arquivo final)
+      - name: latest.yml
+        run: node scripts/latest-yml.mjs out/TuneGrab-Setup.exe ${{ steps.exe.outputs.version }}
+
+      - name: Guardar o resultado
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: TuneGrab-${{ steps.exe.outputs.version }}
+          path: out/
+
+      - name: Publicar a release
+        if: ${{ github.ref_type == 'tag' }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $notas = "release-notes/$tag.md"
+          if (-not (Test-Path $notas)) { "TuneGrab $tag. Baixe **TuneGrab-Setup.exe** abaixo — quem já tem o programa recebe o aviso ""Atualizar agora""." | Out-File -Encoding utf8 $notas }
+          # exigido pela SignPath Foundation: link da política de assinatura em toda página de download
+          "`n`n---`n[Code signing policy / Política de assinatura e privacidade](https://github.com/jeanevertonoficial/TuneGrab#pol%C3%ADtica-de-assinatura-de-c%C3%B3digo-code-signing-policy)" | Out-File -Append -Encoding utf8 $notas
+          gh release create $tag out/TuneGrab-Setup.exe out/latest.yml --title "TuneGrab $($tag.Substring(1))" --notes-file $notas --verify-tag

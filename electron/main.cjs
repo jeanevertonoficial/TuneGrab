@@ -336,6 +336,21 @@ function maisNova(a, b) {
   return false
 }
 
+// procurar sozinho (ao abrir e a cada 6 h) pode ser desligado no menu do ícone; o único dado enviado é o
+// pedido ao GitHub (como abrir uma página), nada sobre a pessoa ou as músicas dela
+const prefAtualizar = path.join(dados, 'state', 'atualizacoes.json')
+function autoAtualizar() {
+  try { return JSON.parse(fs.readFileSync(prefAtualizar, 'utf8')).auto !== false }
+  catch { return true }
+}
+function definirAutoAtualizar(ligar) {
+  try {
+    fs.mkdirSync(path.dirname(prefAtualizar), { recursive: true })
+    fs.writeFileSync(prefAtualizar, JSON.stringify({ auto: !!ligar }))
+  }
+  catch {}
+}
+
 async function checarAtualizacao(manual = false) {
   try {
     const r = await baixar(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { 'User-Agent': 'TuneGrab', 'Accept': 'application/vnd.github+json' } })
@@ -460,6 +475,13 @@ function montarMenuBandeja() {
         montarMenuBandeja()
       },
     },
+    {
+      label: 'Procurar atualizações sozinho', type: 'checkbox', checked: autoAtualizar(), enabled: empacotado,
+      click: (item) => {
+        definirAutoAtualizar(item.checked)
+        montarMenuBandeja()
+      },
+    },
     { label: 'Pasta de dados (histórico, login)', click: () => void shell.openPath(dados) },
     { type: 'separator' },
     atualizacao
@@ -501,12 +523,23 @@ app.whenReady().then(async () => {
   app.setAppUserModelId('com.jeaneverton.tunegrab') // nome certo nas notificações do Windows
   Menu.setApplicationMenu(null)
 
-  // 1ª vez: liga o "iniciar com o Windows" (o app fica sempre no ar); dá para desligar no menu da bandeja
+  // 1ª vez: PERGUNTA se pode abrir junto com o Windows (nada muda no sistema sem a pessoa saber);
+  // dá para mudar depois no menu do ícone perto do relógio
   const marca = path.join(dados, 'state', '.primeira-vez')
   if (empacotado && !fs.existsSync(marca)) {
-    definirInicio(true)
     fs.mkdirSync(path.dirname(marca), { recursive: true })
     fs.writeFileSync(marca, new Date().toISOString())
+    const { response } = await dialog.showMessageBox({
+      type: 'question',
+      title: 'TuneGrab',
+      message: 'Abrir o TuneGrab junto com o Windows?',
+      detail: 'Ele fica escondido perto do relógio, pronto para baixar e tocar quando você precisar. Dá para mudar quando quiser no menu do ícone perto do relógio (Iniciar com o Windows).',
+      buttons: ['Sim, abrir com o Windows', 'Agora não'],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true,
+    })
+    definirInicio(response === 0)
   }
 
   montarBandeja()
@@ -520,7 +553,7 @@ app.whenReady().then(async () => {
   criarMini() // já pronta (escondida): ao minimizar aparece na hora
   // atualizações: confere logo depois de abrir e a cada 6 h (só no programa instalado)
   if (empacotado) {
-    setTimeout(() => void checarAtualizacao(), 8000)
-    setInterval(() => void checarAtualizacao(), 6 * 60 * 60 * 1000)
+    setTimeout(() => autoAtualizar() && void checarAtualizacao(), 8000)
+    setInterval(() => autoAtualizar() && void checarAtualizacao(), 6 * 60 * 60 * 1000)
   }
 })

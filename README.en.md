@@ -13,6 +13,7 @@
   <a href="https://github.com/jeanevertonoficial/TuneGrab/releases/latest/download/TuneGrab-Setup.exe"><b>⬇️ Download for Windows</b></a>
   &nbsp;·&nbsp; <a href="README.md">Português</a>
   &nbsp;·&nbsp; <a href="#legal-notice">Legal notice</a>
+  &nbsp;·&nbsp; <a href="#code-signing-policy">Code signing policy</a>
 </p>
 
 <p align="center">
@@ -61,10 +62,30 @@ SHA-512 and reopens.
 
 <img src="docs/media/pasta.gif" alt="Artist folder, player and options menu" width="720">
 
-## Privacy
-
 Everything stays on your computer (`%APPDATA%\TuneGrab`). The internal server only listens on `127.0.0.1`.
-The app talks only to YouTube, Spotify/Deezer (to read playlists), LRCLIB (lyrics) and GitHub (update check).
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+> Status: application to the SignPath Foundation open-source program in progress. Until it is approved, the installer
+> is unsigned (Windows shows "unknown publisher").
+
+- The installer is built **on GitHub's servers** from this repository ([workflow](.github/workflows/instalador.yml)),
+  and each release is signed only after **manual approval**.
+- Autor, revisor e aprovador / Committers, reviewers and approvers: [Jean Everton](https://github.com/jeanevertonoficial) (mantenedor / maintainer)
+- Third-party components (FFmpeg, yt-dlp, Electron) are bundled as published by their projects — see
+  [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
+### Privacy policy
+
+This program will not transfer any information to other networked systems unless specifically requested by the user
+or the person installing or operating it. On the user's actions it connects to **YouTube** (search, preview, download,
+optional sign-in), **Spotify** and **Deezer** (to read a pasted playlist) and **LRCLIB** (lyrics). The only automatic
+connection is the **update check on GitHub** (at startup and every 6 hours), which sends no personal data and can be
+turned off in the tray menu ("Procurar atualizações sozinho"). There are no TuneGrab servers. The privacy policies of
+those services apply when you use them.
+
 
 ## Run from source
 

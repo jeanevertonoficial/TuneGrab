@@ -98,7 +98,8 @@
       "runAfterFinish": true,
       "uninstallDisplayName": "TuneGrab",
       "artifactName": "TuneGrab-Setup-${version}.${ext}",
-      "deleteAppDataOnUninstall": false
+      "deleteAppDataOnUninstall": false,
+      "include": "build/installer.nsh"
     },
     "files": [
       "main.cjs",
