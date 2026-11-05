@@ -22,6 +22,12 @@ const options: { id: Source, name: string, hint?: string, disabled?: boolean }[]
 ]
 const lastError = ref<string | null>(null)
 const embedLyrics = ref(true)
+// versão do programa instalado (no navegador fica em branco)
+const appVersion = ref('')
+onMounted(async () => {
+  const info = await (window as any).tunegrabDesktop?.updateInfo?.().catch(() => null)
+  if (info?.current) appVersion.value = info.current
+})
 
 /** a opção de letras vale na hora (não depende do botão Salvar) */
 async function saveLyricsOption() {
@@ -148,6 +154,21 @@ async function saveAndClose() {
           </div>
         </section>
 
+        <section class="about">
+          <h3>Sobre o TuneGrab<span v-if="appVersion" class="ver"> · versão {{ appVersion }}</span></h3>
+          <p class="hint">
+            Software livre (licença <a href="https://github.com/jeanevertonoficial/TuneGrab/blob/main/LICENSE" target="_blank" rel="noopener">GPL-3.0</a>),
+            feito com <a href="https://github.com/yt-dlp/yt-dlp" target="_blank" rel="noopener">yt-dlp</a>, FFmpeg, Nuxt e Electron —
+            <a href="https://github.com/jeanevertonoficial/TuneGrab/blob/main/THIRD-PARTY-NOTICES.md" target="_blank" rel="noopener">licenças de terceiros</a>.
+            Código e novidades: <a href="https://github.com/jeanevertonoficial/TuneGrab" target="_blank" rel="noopener">github.com/jeanevertonoficial/TuneGrab</a>.
+          </p>
+          <p class="hint small">
+            Para uso pessoal: baixe apenas o que você tem direito de baixar (conteúdo próprio, com licença livre ou com
+            autorização) e respeite os termos dos serviços que usa. O TuneGrab não tem ligação com YouTube, Google, Spotify
+            ou Deezer, não hospeda nenhum conteúdo e não contorna proteção de cópia (DRM).
+          </p>
+        </section>
+
         <div class="buttons">
           <button class="btn-text" @click="open = false">Fechar</button>
           <button class="btn-green go" @click="saveAndClose">Salvar</button>
@@ -178,6 +199,10 @@ textarea { width: 100%; background: #3e3e3e; border: 1px solid transparent; bord
 .test { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
 .ok { color: var(--green); display: inline-flex; gap: 6px; align-items: center; font-size: 14px; font-weight: 600; }
 .bad { color: var(--red); font-size: 13px; flex: 1; min-width: 200px; line-height: 1.4; }
+.about { border-top: 1px solid #3a3a3a; padding-top: 14px; }
+.about .ver { font-weight: 400; color: var(--subdued); font-size: 13px; }
+.about a { color: #fff; text-decoration: underline; }
+.hint.small { font-size: 12.5px; }
 .buttons { display: flex; justify-content: flex-end; gap: 8px; }
 .btn-text { padding: 10px 16px; font-weight: 700; color: var(--subdued); }
 .btn-text:hover { color: #fff; }

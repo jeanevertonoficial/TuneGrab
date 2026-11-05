@@ -1,0 +1,18 @@
+name: Ideia ou melhoria
+description: Sugira um recurso ou uma mudança
+labels: [ideia]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: O que você quer fazer e hoje não dá (ou é difícil)?
+    validations:
+      required: true
+  - type: textarea
+    id: solucao
+    attributes:
+      label: Como imagina que poderia funcionar?
+  - type: textarea
+    id: extra
+    attributes:
+      label: Algo mais? (prints, exemplos de outros apps)

@@ -3,9 +3,20 @@
 </p>
 
 <p align="center">
-  Baixe músicas, playlists, canais e vídeos do <b>YouTube</b>, <b>Spotify</b> e <b>Deezer</b>,
-  salve direto no <b>pendrive</b>, organize sua coleção e ouça com <b>letra sincronizada</b>.<br>
-  Interface no estilo do Spotify. Feito com Nuxt 4, <a href="https://github.com/yt-dlp/yt-dlp">yt-dlp</a> e ffmpeg.
+  Player e organizador de música para Windows: salve direto no <b>pendrive</b> (para o som do carro),
+  organize sua coleção, encontre repetidas e ouça com <b>letra sincronizada</b>.<br>
+  Importa listas do Spotify e da Deezer, e baixa vídeos públicos do YouTube via <a href="https://github.com/yt-dlp/yt-dlp">yt-dlp</a>.
+  Software livre (GPL-3.0), feito com Nuxt 4, Electron e FFmpeg.
+</p>
+
+<p align="center">
+  <a href="https://github.com/jeanevertonoficial/TuneGrab/releases/latest/download/TuneGrab-Setup.exe"><b>⬇️ Baixar para Windows</b></a>
+  &nbsp;·&nbsp; <a href="README.en.md">English</a>
+  &nbsp;·&nbsp; <a href="#aviso-legal">Aviso legal</a>
+</p>
+
+<p align="center">
+  <img src="docs/media/busca.gif" alt="Busca por nome, ouvir antes e montar a pré-lista" width="860">
 </p>
 
 ---
@@ -25,7 +36,9 @@
 - [Solução de problemas](#solução-de-problemas)
 - [Manutenção](#manutenção)
 - [Estrutura do código](#estrutura-do-código)
-- [Créditos](#créditos)
+- [Contribuir](#contribuir)
+- [Créditos e licença](#créditos-e-licença)
+- [Aviso legal](#aviso-legal)
 
 ---
 
@@ -138,6 +151,8 @@ Mudou o símbolo? Rode `npm run icons`: ele gera favicon, ícones do app, Androi
 
 ### Busca por nome e pré-lista
 
+<img src="docs/media/busca.gif" alt="Busca, ouvir antes e pré-lista" width="720">
+
 - No mesmo campo do link, digite **música, artista ou gênero** ("gabriela rocha", "rock anos 80"): aparecem os 30 vídeos mais relevantes.
 - Marcar uma música a coloca na **pré-lista**. Faça várias buscas: tudo vai somando.
 - Abra a **Pré-lista** para revisar, escolher formato/pasta e baixar tudo de uma vez (as desmarcadas continuam guardadas).
@@ -181,12 +196,16 @@ Com a conta conectada:
 
 ### Salvar direto no pendrive (ou em qualquer pasta)
 
+<img src="docs/media/baixar.gif" alt="Escolher a pasta e baixar com capa, tags e letra" width="720">
+
 - Pendrives e HDs USB são detectados sozinhos, com aviso ao conectar/remover — inclusive pendrive **sem letra de unidade**.
 - Na hora de baixar, escolha **Salvar em**: Navegador, o pendrive ou **Escolher pasta…** (cria pastas novas).
 - Playlists vão para uma pasta própria com **nome editável** ("Criar pasta “…”").
 - Música + vídeo juntos: os vídeos vão para a pasta irmã `…_VIDEO` (na raiz do pendrive: `VIDEO`).
 
 ### Gerenciador de arquivos
+
+<img src="docs/media/pasta.gif" alt="Pasta do artista, player e menu de opções" width="720">
 
 - Navega por pendrives, discos, unidades de rede e pastas do usuário.
 - Cria, renomeia, move, copia e exclui pastas e músicas (uma ou várias).
@@ -330,12 +349,36 @@ app/
 public/         logo, ícones, manifest.webmanifest, sw.js
 brand/          arte original da logo e o símbolo em vetor (symbol.svg)
 electron/       programa para Windows: main.cjs (janela, servidor interno, bandeja, iniciar com o Windows)
-scripts/        setup-ytdlp.mjs, make-icons.mjs
+scripts/        setup-ytdlp.mjs, make-icons.mjs, third-party.mjs (licenças), publish-release.mjs (publicar versão)
+docs/media/     GIFs de demonstração (músicas com licença livre)
 ```
 
-## Créditos
+## Contribuir
 
-[yt-dlp](https://github.com/yt-dlp/yt-dlp) · [ffmpeg](https://ffmpeg.org) · [LRCLIB](https://lrclib.net) (letras) ·
-[music-metadata](https://github.com/borewit/music-metadata) · [node-id3](https://github.com/Zazama/node-id3) · [Nuxt](https://nuxt.com)
+Ideias, erros e melhorias são bem-vindos: abra uma [issue](https://github.com/jeanevertonoficial/TuneGrab/issues)
+ou veja o [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Projeto de uso pessoal. Respeite os direitos dos artistas e os termos dos serviços.
+## Créditos e licença
+
+[yt-dlp](https://github.com/yt-dlp/yt-dlp) · [FFmpeg](https://ffmpeg.org) · [LRCLIB](https://lrclib.net) (letras) ·
+[music-metadata](https://github.com/borewit/music-metadata) · [node-id3](https://github.com/Zazama/node-id3) ·
+[Nuxt](https://nuxt.com) · [Electron](https://www.electronjs.org)
+
+O TuneGrab é software livre sob a licença **GNU GPL-3.0-or-later** ([LICENSE](LICENSE)): você pode usar, estudar,
+modificar e redistribuir, desde que as versões modificadas continuem abertas sob a mesma licença.
+O instalador inclui o FFmpeg (GPL-3.0) e o yt-dlp (Unlicense); a lista completa de componentes e licenças está em
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) (também na pasta de instalação).
+
+## Aviso legal
+
+- O TuneGrab é uma ferramenta para **uso pessoal**. Baixe apenas conteúdo que você tem direito de baixar: o seu próprio,
+  com licença livre (ex.: Creative Commons), em domínio público ou com autorização de quem tem os direitos.
+- Respeite os direitos autorais e os termos de uso dos serviços que você acessa. A responsabilidade pelo que é baixado
+  é de quem usa.
+- O projeto **não hospeda nem distribui** músicas ou vídeos, e **não contorna proteção de cópia (DRM)**: de Spotify e
+  Deezer ele lê apenas a lista (nome, artista, duração, capa); o áudio vem de vídeos públicos do YouTube, via yt-dlp.
+- O TuneGrab **não tem ligação** com YouTube, Google, Spotify, Deezer ou Amazon. Os nomes são citados só para indicar
+  compatibilidade e pertencem aos seus donos.
+- As demonstrações (GIFs) usam só músicas com licença livre: "Fluffing a Duck", "Volatile Reaction" e "Garden Music",
+  de Kevin MacLeod ([incompetech.com](https://incompetech.com)), licenciadas sob [Creative Commons: By Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
+- O software é fornecido "como está", sem garantias (veja a [licença](LICENSE)).

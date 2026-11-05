@@ -1,10 +1,12 @@
 {
   "name": "tunegrab",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "type": "module",
-  "description": "Baixe músicas, playlists e vídeos do YouTube, Spotify e Deezer, salve no pendrive e ouça com letra.",
+  "description": "Player e organizador de música para Windows: salva no pendrive, importa listas do Spotify/Deezer e ouve com letra sincronizada.",
   "author": "Jean Everton",
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://github.com/jeanevertonoficial/TuneGrab",
   "scripts": {
     "postinstall": "node scripts/setup-ytdlp.mjs && nuxt prepare",
     "setup": "node scripts/setup-ytdlp.mjs --force",
@@ -14,7 +16,8 @@
     "icons": "node scripts/make-icons.mjs",
     "desktop": "nuxt build && electron electron",
     "release": "node scripts/publish-release.mjs",
-    "dist": "nuxt build && electron-builder --win"
+    "notices": "node scripts/third-party.mjs",
+    "dist": "nuxt build && node scripts/third-party.mjs && electron-builder --win"
   },
   "dependencies": {
     "@fontsource-variable/figtree": "^5.3.0",
@@ -51,6 +54,18 @@
       {
         "from": "node_modules/ffmpeg-static/ffmpeg.exe",
         "to": "bin/ffmpeg.exe"
+      },
+      {
+        "from": "node_modules/ffmpeg-static/ffmpeg.exe.README",
+        "to": "bin/ffmpeg.README.txt"
+      },
+      {
+        "from": "LICENSE",
+        "to": "LICENSE.txt"
+      },
+      {
+        "from": "THIRD-PARTY-NOTICES.md",
+        "to": "THIRD-PARTY-NOTICES.md"
       },
       {
         "from": "public/icons/icon-512.png",

@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Baixar a versão mais nova
+    url: https://github.com/jeanevertonoficial/TuneGrab/releases/latest
+    about: O programa instalado já se atualiza sozinho; aqui está o instalador.

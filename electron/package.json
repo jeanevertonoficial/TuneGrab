@@ -2,7 +2,8 @@
   "name": "tunegrab",
   "productName": "TuneGrab",
   "version": "1.0.1",
-  "description": "Baixe músicas, playlists e vídeos e salve direto no pendrive.",
+  "description": "Player e organizador de música para Windows.",
   "author": "Jean Everton",
-  "main": "main.cjs"
+  "main": "main.cjs",
+  "license": "GPL-3.0-or-later"
 }

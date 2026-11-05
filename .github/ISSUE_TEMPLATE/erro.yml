@@ -1,0 +1,39 @@
+name: Algo deu errado
+description: Relate um erro no TuneGrab
+labels: [erro]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por avisar! **Não cole** o arquivo `cookies.txt` nem nada da pasta `state` (têm a sua sessão do YouTube).
+  - type: input
+    id: versao
+    attributes:
+      label: Versão do TuneGrab
+      description: Configurações → Sobre, ou botão direito no ícone perto do relógio.
+      placeholder: "1.0.2"
+    validations:
+      required: true
+  - type: dropdown
+    id: onde
+    attributes:
+      label: Onde você usa
+      options:
+        - Programa instalado (Windows)
+        - Pelo código (npm run dev)
+        - No navegador (localhost:47800)
+    validations:
+      required: true
+  - type: textarea
+    id: oque
+    attributes:
+      label: O que aconteceu?
+      description: O que você fez, o que esperava e o que aconteceu. Prints ajudam.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Registro (opcional)
+      description: Trecho de %APPDATA%\TuneGrab\logs\servidor.log perto do horário do erro (tire dados pessoais).
+      render: text
