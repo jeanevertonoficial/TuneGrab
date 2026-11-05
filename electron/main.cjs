@@ -324,6 +324,9 @@ ipcMain.on('tunegrab:mini-close', (e) => {
 const REPO = 'jeanevertonoficial/TuneGrab'
 let atualizacao = null // { version, notes, exe, yml, size }
 let instalando = false
+// rede do Chromium (net.fetch): o fetch do Node aqui no programa travava ~30 s no redirecionamento
+// dos arquivos do GitHub; o do Chromium usa o proxy do Windows e é tão rápido quanto o navegador
+const baixar = (u, opts) => require('electron').net.fetch(u, { ...opts, cache: 'no-store' })
 
 /** 1.2.10 > 1.2.9 */
 function maisNova(a, b) {
@@ -335,7 +338,7 @@ function maisNova(a, b) {
 
 async function checarAtualizacao(manual = false) {
   try {
-    const r = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { 'User-Agent': 'TuneGrab', 'Accept': 'application/vnd.github+json' } })
+    const r = await baixar(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { 'User-Agent': 'TuneGrab', 'Accept': 'application/vnd.github+json' } })
     if (!r.ok) throw new Error(`GitHub respondeu ${r.status}`)
     const rel = await r.json()
     const version = String(rel.tag_name || '').replace(/^v/, '')
@@ -363,36 +366,60 @@ async function instalarAtualizacao() {
   if (!atualizacao || instalando) return { ok: false }
   instalando = true
   const progresso = p => janela?.webContents.send('tunegrab:update-progress', p)
+  progresso({ fase: 'baixando', pct: 0, mb: 0 })
+  // registro de cada etapa (logs/atualizacao.log): ajuda se algum dia a atualização demorar ou falhar
+  const t0 = Date.now()
+  const reg = msg => fs.appendFile(path.join(logs, 'atualizacao.log'), `${new Date().toISOString()} +${Date.now() - t0}ms ${msg}\n`, () => {})
+  reg(`início ${app.getVersion()} -> ${atualizacao.version}`)
+  // sem receber nada por 60 s (internet caiu, GitHub travou): desiste e oferece "Tentar de novo"
+  const ac = new AbortController()
+  let parado = null
+  const vigiar = () => {
+    clearTimeout(parado)
+    parado = setTimeout(() => ac.abort(new Error('O download parou (sem resposta do GitHub). Confira a internet e tente de novo.')), 60000)
+  }
+  vigiar()
   try {
     const crypto = require('node:crypto')
     // sha512 esperado (o latest.yml é gerado junto com o instalador)
-    const yml = await (await fetch(atualizacao.yml, { headers: { 'User-Agent': 'TuneGrab' } })).text()
+    const yml = await (await baixar(atualizacao.yml, { headers: { 'User-Agent': 'TuneGrab' }, signal: ac.signal })).text()
     const esperado = /^sha512:\s*(\S+)/m.exec(yml)?.[1]
+    reg('latest.yml recebido')
     if (!esperado) throw new Error('A versão publicada não tem a conferência do arquivo (latest.yml).')
 
     const destino = path.join(app.getPath('temp'), `TuneGrab-Setup-${atualizacao.version}.exe`)
-    const r = await fetch(atualizacao.exe, { headers: { 'User-Agent': 'TuneGrab' } })
+    vigiar()
+    const r = await baixar(atualizacao.exe, { headers: { 'User-Agent': 'TuneGrab' }, signal: ac.signal })
+    reg(`instalador: resposta ${r.status}`)
     if (!r.ok || !r.body) throw new Error(`Download falhou (${r.status})`)
     const total = Number(r.headers.get('content-length')) || atualizacao.size || 0
     const hash = crypto.createHash('sha512')
     const out = fs.createWriteStream(destino)
     let baixado = 0
     let ultimo = 0
-    for await (const parte of r.body) {
+    const leitor = r.body.getReader()
+    for (;;) {
+      const { done, value: parte } = await leitor.read()
+      if (done) break
+      if (!baixado) reg('primeiros bytes')
+      vigiar()
       hash.update(parte)
       baixado += parte.length
       if (!out.write(parte)) await new Promise(res => out.once('drain', res))
       if (Date.now() - ultimo > 200) {
         ultimo = Date.now()
-        progresso({ fase: 'baixando', pct: total ? Math.round(baixado / total * 100) : 0 })
+        progresso({ fase: 'baixando', pct: total ? Math.round(baixado / total * 100) : 0, mb: Math.round(baixado / 1048576) })
       }
     }
     await new Promise((res, rej) => out.end(err => (err ? rej(err) : res())))
+    clearTimeout(parado)
+    reg(`baixado ${baixado} bytes`)
     if (hash.digest('base64') !== esperado) {
       fs.rmSync(destino, { force: true })
       throw new Error('O arquivo baixado não confere com o publicado. Tente de novo.')
     }
 
+    reg('conferido (sha512 ok), instalando')
     progresso({ fase: 'instalando', pct: 100 })
     // instala sem perguntas (/S) e abre o TuneGrab de novo no final (--force-run)
     spawn(destino, ['/S', '--updated', '--force-run'], { detached: true, stdio: 'ignore', windowsHide: true }).unref()
@@ -400,9 +427,12 @@ async function instalarAtualizacao() {
     return { ok: true }
   }
   catch (e) {
+    clearTimeout(parado)
     instalando = false
-    progresso({ fase: 'erro', erro: String(e.message || e) })
-    return { ok: false, erro: String(e.message || e) }
+    const msg = ac.signal.aborted ? String(ac.signal.reason?.message || 'O download parou. Tente de novo.') : String(e.message || e)
+    reg(`erro: ${msg}`)
+    progresso({ fase: 'erro', erro: msg })
+    return { ok: false, erro: msg }
   }
 }
 
