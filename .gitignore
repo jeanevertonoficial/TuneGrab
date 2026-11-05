@@ -9,3 +9,6 @@ downloads/
 pakage-lock.json
 
 release/
+
+# anotações pessoais (configuração da assinatura) — ficam só no PC
+docs/assinatura.md

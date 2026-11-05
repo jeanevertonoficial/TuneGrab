@@ -3,7 +3,9 @@ import type { FsFile } from '~/composables/useFiles'
 
 const { locations } = useDriveLocations()
 const scanRoots = useState<string[] | null>('scanRoots', () => null)
-const library = useState<{ roots: string[], files: (FsFile & { mtime: number })[], truncated: boolean } | null>('library', () => null)
+type LibFile = FsFile & { mtime: number }
+/** músicas primeiro; os vídeos chegam depois, procurados em segundo plano (video: null = ainda procurando) */
+const library = useState<{ roots: string[], audio: LibFile[], video: LibFile[] | null, truncated: boolean } | null>('library2', () => null)
 const { playList, shuffle } = usePlayer()
 
 const scanning = ref(false)
@@ -22,25 +24,45 @@ const selected = ref(new Set<string>())
 const defaultRoots = computed(() => locations.value.filter(l => l.kind !== 'disk').map(l => l.path))
 const roots = computed(() => scanRoots.value ?? defaultRoots.value)
 
-async function scan(fresh = false) {
-  if (!roots.value.length) return
-  scanning.value = true
-  const all = new Map<string, FsFile & { mtime: number }>()
+let scanSeq = 0
+const scanningVideos = ref(false)
+
+/** procura um tipo (áudio ou vídeo) em todas as pastas; pastas podem se sobrepor (Documentos e C:\), então tira repetidos */
+async function scanKind(kind: 'audio' | 'video', fresh: boolean, seq: number, onRoot?: (i: number, root: string) => void) {
+  const all = new Map<string, LibFile>()
   let truncated = false
   for (const [i, root] of roots.value.entries()) {
-    progress.value = `Procurando em ${nameOf(root)} (${i + 1}/${roots.value.length})…`
+    if (seq !== scanSeq) return null
+    onRoot?.(i, root)
     try {
-      const r = await $fetch<{ files: (FsFile & { mtime: number })[], truncated: boolean }>('/api/fs/scan', { query: { path: root, ...(fresh ? { fresh: 1 } : {}) } })
-      // pastas podem se sobrepor (ex.: Documentos e C:\), então remove duplicados
+      const r = await $fetch<{ files: LibFile[], truncated: boolean }>('/api/fs/scan', { query: { path: root, kind, ...(fresh ? { fresh: 1 } : {}) } })
       for (const f of r.files) all.set(f.path.toLowerCase(), f)
       truncated ||= r.truncated
     }
     catch { /* unidade removida no meio da busca */ }
   }
-  library.value = { roots: [...roots.value], files: [...all.values()], truncated }
+  return { files: [...all.values()], truncated }
+}
+
+async function scan(fresh = false) {
+  if (!roots.value.length) return
+  const seq = ++scanSeq
+  scanning.value = true
+  // 1º as músicas: aparecem logo
+  const audio = await scanKind('audio', fresh, seq, (i, root) => {
+    progress.value = `Procurando músicas em ${nameOf(root)} (${i + 1}/${roots.value.length})…`
+  })
+  if (!audio || seq !== scanSeq) return
+  library.value = { roots: [...roots.value], audio: audio.files, video: null, truncated: audio.truncated }
   scanning.value = false
   progress.value = ''
   selected.value = new Set()
+  // depois os vídeos, em segundo plano (a lista de músicas já pode ser usada)
+  scanningVideos.value = true
+  const video = await scanKind('video', fresh, seq)
+  if (seq !== scanSeq) return
+  scanningVideos.value = false
+  if (video && library.value) library.value = { ...library.value, video: video.files, truncated: library.value.truncated || video.truncated }
 }
 
 function nameOf(path: string) {
@@ -58,9 +80,37 @@ watch(roots, (r) => {
   if (r.length && (!library.value || library.value.roots.join('|') !== r.join('|'))) void scan()
 }, { immediate: true })
 
-const files = computed(() => {
+// ---- separação por formato: MP3 (padrão), os outros áudios que existirem e Vídeos ----
+const extOf = (f: FsFile) => f.name.split('.').pop()?.toLowerCase() ?? ''
+const matches = (f: FsFile) => {
   const q = search.value.trim().toLowerCase()
-  const list = (library.value?.files ?? []).filter(f => !q || [f.title, f.artist, f.album, f.name].some(v => v?.toLowerCase().includes(q)))
+  return !q || [f.title, f.artist, f.album, f.name].some(v => v?.toLowerCase().includes(q))
+}
+const tab = ref('mp3')
+const tabs = computed(() => {
+  const audio = library.value?.audio ?? []
+  const byExt = new Map<string, number>()
+  for (const f of audio) if (matches(f)) byExt.set(extOf(f), (byExt.get(extOf(f)) ?? 0) + 1)
+  // ordem fixa (não muda ao buscar): MP3 primeiro, depois os outros pelo total de arquivos
+  const total = new Map<string, number>()
+  for (const f of audio) total.set(extOf(f), (total.get(extOf(f)) ?? 0) + 1)
+  const exts = [...total.keys()].sort((a, b) => (a === 'mp3' ? -1 : b === 'mp3' ? 1 : (total.get(b) ?? 0) - (total.get(a) ?? 0)))
+  const list: { id: string, label: string, count: number | null }[] = exts.map(e => ({ id: e, label: e.toUpperCase(), count: byExt.get(e) ?? 0 }))
+  // Vídeos logo depois do formato principal (MP3): MP3 · Vídeos · WAV · M4A…
+  const video = library.value?.video
+  list.splice(Math.min(1, list.length), 0, { id: 'video', label: 'Vídeos', count: video ? video.filter(matches).length : null })
+  return list
+})
+// sem MP3 nessas pastas: abre no primeiro formato que tiver
+watch(tabs, (t) => {
+  if (!t.some(x => x.id === tab.value)) tab.value = t[0]?.id ?? 'video'
+})
+watch(tab, () => (selected.value = new Set()))
+const isVideoTab = computed(() => tab.value === 'video')
+
+const files = computed(() => {
+  const source = isVideoTab.value ? (library.value?.video ?? []) : (library.value?.audio ?? []).filter(f => extOf(f) === tab.value)
+  const list = source.filter(matches)
   const key = (f: FsFile) => (sort.value === 'title' ? f.title || f.name : sort.value === 'artist' ? f.artist || '~' : f.album || '~')
   return sort.value === 'recent'
     ? [...list].sort((a, b) => b.mtime - a.mtime)
@@ -113,7 +163,9 @@ function playAll(shuffled = false) {
         <p class="meta">
           <template v-if="scanning">{{ progress }}</template>
           <template v-else-if="library">
-            {{ files.length }} música{{ files.length === 1 ? '' : 's' }} • {{ formatBytes(totalSize) }}
+            <template v-if="isVideoTab">{{ files.length }} vídeo{{ files.length === 1 ? '' : 's' }}</template>
+            <template v-else>{{ files.length }} música{{ files.length === 1 ? '' : 's' }} em {{ tab.toUpperCase() }}</template>
+            • {{ formatBytes(totalSize) }}
             <template v-if="library.truncated"> • mostrando as primeiras 5.000 por pasta</template>
           </template>
         </p>
@@ -130,6 +182,18 @@ function playAll(shuffled = false) {
       </button>
       <button v-for="r in roots.filter(r => !locations.some(l => l.path === r))" :key="r" class="chip active" @click="toggleRoot(r)">
         <Icon name="folder" :size="14" /> {{ nameOf(r) }}
+      </button>
+    </div>
+
+    <div v-if="library" class="formats" role="tablist" aria-label="Formato">
+      <button
+        v-for="t in tabs" :key="t.id" role="tab" class="fmt" :class="{ on: tab === t.id }" :aria-selected="tab === t.id"
+        @click="tab = t.id"
+      >
+        <Icon v-if="t.id === 'video'" name="video" :size="15" />
+        {{ t.label }}
+        <span v-if="t.count !== null" class="n">{{ t.count }}</span>
+        <span v-else class="n" title="Procurando vídeos…"><Icon name="loader" :size="13" class="spin" /></span>
       </button>
     </div>
 
@@ -153,8 +217,11 @@ function playAll(shuffled = false) {
       v-if="files.length" :files="files" :selected="selected" show-folder
       @play="cmd.play" @toggle="toggle" @toggle-all="toggleAll" @action="cmd.action"
     />
+    <p v-else-if="isVideoTab && library && !library.video" class="empty">
+      <Icon name="loader" :size="16" class="spin" /> Procurando vídeos nessas pastas…
+    </p>
     <p v-else-if="!scanning && library" class="empty">
-      {{ search ? 'Nada encontrado para essa busca.' : 'Nenhuma música encontrada nessas pastas.' }}
+      {{ search ? 'Nada encontrado para essa busca.' : isVideoTab ? 'Nenhum vídeo encontrado nessas pastas.' : 'Nenhuma música encontrada nessas pastas.' }}
     </p>
   </div>
 </template>
@@ -188,6 +255,16 @@ h1 { margin: 0; font-size: clamp(32px, 5vw, 72px); font-weight: 800; letter-spac
 .roots-label { color: var(--subdued); font-size: 14px; margin-right: 4px; }
 .chip { display: inline-flex; align-items: center; gap: 6px; }
 
+/* abas de formato (MP3, outros áudios, Vídeos) */
+.formats { display: flex; gap: 8px; flex-wrap: wrap; padding: 18px 24px 0; }
+.fmt {
+  display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 14px; border-radius: 999px;
+  background: #2a2a2a; color: #fff; font-size: 14px; font-weight: 600;
+}
+.fmt:hover { background: #333; }
+.fmt.on { background: #fff; color: #000; }
+.fmt .n { font-weight: 400; font-size: 12px; opacity: .7; font-variant-numeric: tabular-nums; }
+.empty { display: flex; align-items: center; gap: 8px; }
 .actions { display: flex; align-items: center; gap: 20px; padding: 20px 24px; }
 .big { width: 56px; height: 56px; }
 .icon-btn { color: var(--subdued); display: grid; place-items: center; }

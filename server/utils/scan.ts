@@ -1,6 +1,6 @@
 import { readdir, stat } from 'node:fs/promises'
 import { basename, join } from 'node:path'
-import { deletePending, isMedia, readMeta } from './media'
+import { deletePending, isMedia, mimeOf, readMeta } from './media'
 
 const SKIP = new Set([
   'node_modules', 'appdata', 'windows', 'program files', 'program files (x86)', 'programdata',
@@ -9,8 +9,9 @@ const SKIP = new Set([
 const MAX_FILES = 5000
 const MAX_DEPTH = 12
 
-/** Procura arquivos de mídia na pasta e subpastas (pula pastas do sistema e ocultas). */
-export async function findMedia(root: string) {
+/** Procura arquivos de mídia na pasta e subpastas (pula pastas do sistema e ocultas). kind: só áudio ou só vídeo. */
+export async function findMedia(root: string, kind?: 'audio' | 'video') {
+  const wanted = (name: string) => isMedia(name) && (!kind || mimeOf(name).startsWith(`${kind}/`))
   const found: string[] = []
   let truncated = false
 
@@ -24,7 +25,7 @@ export async function findMedia(root: string) {
       if (e.isDirectory()) {
         if (!SKIP.has(e.name.toLowerCase())) await walk(full, depth + 1)
       }
-      else if (e.isFile() && isMedia(e.name)) {
+      else if (e.isFile() && wanted(e.name)) {
         found.push(full)
         if (found.length >= MAX_FILES) truncated = true
       }
