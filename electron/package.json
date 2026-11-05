@@ -1,7 +1,7 @@
 {
   "name": "tunegrab",
   "productName": "TuneGrab",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Player e organizador de música para Windows.",
   "author": "Jean Everton",
   "main": "main.cjs",
