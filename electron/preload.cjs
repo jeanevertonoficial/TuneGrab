@@ -14,6 +14,15 @@ contextBridge.exposeInMainWorld('tunegrabDesktop', {
   closeFloat: () => ipcRenderer.send('tunegrab:float-close'),
   /** botões da janelinha chegando ao player do app */
   onCmd: cb => ipcRenderer.on('tunegrab:cmd', (_e, cmd) => cb(cmd)),
+  // ---- atualização pelo app ----
+  /** versão atual e a nova (se houver) */
+  updateInfo: () => ipcRenderer.invoke('tunegrab:update-info'),
+  /** avisa quando aparece uma versão nova */
+  onUpdate: cb => ipcRenderer.on('tunegrab:update', (_e, info) => cb(info)),
+  /** baixa, confere e instala (o app fecha e abre de novo atualizado) */
+  installUpdate: () => ipcRenderer.invoke('tunegrab:update-install'),
+  /** andamento: { fase: 'baixando' | 'instalando' | 'erro', pct, erro } */
+  onUpdateProgress: cb => ipcRenderer.on('tunegrab:update-progress', (_e, p) => cb(p)),
   // ---- janela flutuante (mini.html) ----
   /** estado do player do app */
   onState: cb => ipcRenderer.on('tunegrab:state', (_e, st) => cb(st)),

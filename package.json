@@ -1,6 +1,6 @@
 {
   "name": "tunegrab",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "description": "Baixe músicas, playlists e vídeos do YouTube, Spotify e Deezer, salve no pendrive e ouça com letra.",
@@ -13,6 +13,7 @@
     "preview": "nuxt preview",
     "icons": "node scripts/make-icons.mjs",
     "desktop": "nuxt build && electron electron",
+    "release": "node scripts/publish-release.mjs",
     "dist": "nuxt build && electron-builder --win"
   },
   "dependencies": {

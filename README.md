@@ -50,13 +50,26 @@ instala só para o seu usuário, sem pedir administrador. O Windows pode avisar 
 **Gerar o instalador:**
 
 ```bash
-npm run dist     # cria release/TuneGrab-Setup-1.0.0.exe
+npm run dist     # cria release/TuneGrab-Setup-<versão>.exe
 npm run desktop  # testa o programa sem instalar
 ```
 
 Instalação por usuário (sem pedir administrador), em `%LOCALAPPDATA%\Programs\TuneGrab`, com atalhos na área de trabalho e no
 menu Iniciar. Os dados ficam em **`%APPDATA%\TuneGrab`** (veja [Seus dados](#seus-dados-e-privacidade)) e continuam lá ao atualizar
-ou desinstalar. Para atualizar, gere e instale um novo `.exe` por cima.
+ou desinstalar.
+
+**Atualizações pelo próprio app:** o programa confere o GitHub ao abrir e a cada 6 horas. Quando sai versão nova aparece
+o aviso **"Nova versão do TuneGrab"** com **Atualizar agora**: ele baixa o instalador, confere se o arquivo veio inteiro
+(sha512), instala sozinho e abre o TuneGrab de novo — histórico, login e preferências continuam. Também dá para procurar
+pelo menu do ícone perto do relógio (**Procurar atualizações**). Downloads em andamento continuam depois, de onde pararam.
+
+**Publicar uma versão nova** (para os programas instalados receberem o aviso):
+
+```bash
+# 1. aumente "version" no package.json (ex.: 1.0.1 -> 1.0.2)
+npm run release              # gera o instalador e cria a release v1.0.2 no GitHub
+npm run release -- notas.md  # o mesmo, com um arquivo de novidades
+```
 
 > A versão publicada na Vercel (ou em qualquer nuvem) só mostra a interface: pendrive, login e downloads precisam rodar
 > **no seu computador**.
@@ -213,6 +226,7 @@ Com a conta conectada:
 | F | vídeo em tela cheia |
 | Esc | fechar letra / reduzir vídeo |
 | Tab até a barra de tempo, depois ← → / Page Up/Down / Home/End | 5 s / 30 s / início e fim |
+
 - **Janela flutuante:** no programa instalado, minimizar o app com um vídeo tocando faz o vídeo ficar **por cima de todas as
   janelas**, no canto — arraste para onde quiser e mude o tamanho pela borda. Ao voltar ao app, ela fecha sozinha.
   O som nunca sai do app (a janelinha mostra só a imagem, acompanhando): minimizar e voltar não pausam, não pulam
@@ -282,6 +296,7 @@ npm run setup   # atualiza o yt-dlp (o YouTube muda com frequência)
 npm run icons   # gera todas as variações da logo a partir de brand/symbol.svg
 npm run build   # confere se tudo compila
 npm run dist    # gera o instalador do programa (release/)
+npm run release # publica a versão do package.json no GitHub (os apps instalados se atualizam)
 ```
 
 - Para usar um yt-dlp/ffmpeg já instalado no sistema, defina `YTDLP_PATH` e/ou `FFMPEG_PATH`.

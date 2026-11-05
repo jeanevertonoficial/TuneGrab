@@ -185,6 +185,7 @@ const devices = computed(() => locations.value.filter(l => l.kind !== 'folder'))
 
     <DialogHost />
     <SettingsDialog v-model="settingsOpen" />
+    <ClientOnly><UpdateBanner /></ClientOnly>
     <div class="toasts">
       <div v-for="t in toasts" :key="t.id" class="toast" :class="{ error: t.error }">{{ t.text }}</div>
     </div>

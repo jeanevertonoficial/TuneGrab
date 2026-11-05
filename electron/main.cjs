@@ -317,6 +317,98 @@ ipcMain.on('tunegrab:mini-close', (e) => {
   esconderMini()
 })
 
+// ---------- atualização pelo próprio app ----------
+// Confere a última versão publicada no GitHub (ao abrir e a cada 6 h). Tem nova? Avisa na tela do app;
+// com um clique baixa o instalador, confere se o arquivo veio inteiro (sha512 do latest.yml) e instala
+// sozinho, sem perguntas, abrindo o TuneGrab de novo no final. Histórico, login e preferências ficam.
+const REPO = 'jeanevertonoficial/TuneGrab'
+let atualizacao = null // { version, notes, exe, yml, size }
+let instalando = false
+
+/** 1.2.10 > 1.2.9 */
+function maisNova(a, b) {
+  const pa = String(a).split('.').map(n => Number.parseInt(n) || 0)
+  const pb = String(b).split('.').map(n => Number.parseInt(n) || 0)
+  for (let i = 0; i < 3; i++) if ((pa[i] ?? 0) !== (pb[i] ?? 0)) return (pa[i] ?? 0) > (pb[i] ?? 0)
+  return false
+}
+
+async function checarAtualizacao(manual = false) {
+  try {
+    const r = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { 'User-Agent': 'TuneGrab', 'Accept': 'application/vnd.github+json' } })
+    if (!r.ok) throw new Error(`GitHub respondeu ${r.status}`)
+    const rel = await r.json()
+    const version = String(rel.tag_name || '').replace(/^v/, '')
+    const exe = rel.assets?.find(a => /\.exe$/i.test(a.name))
+    const yml = rel.assets?.find(a => a.name === 'latest.yml')
+    if (version && exe && yml && maisNova(version, app.getVersion())) {
+      const nova = !atualizacao || atualizacao.version !== version
+      atualizacao = { version, notes: rel.body || '', exe: exe.browser_download_url, yml: yml.browser_download_url, size: exe.size }
+      janela?.webContents.send('tunegrab:update', atualizacao)
+      if (nova && bandeja && (!janela || !janela.isVisible())) {
+        bandeja.displayBalloon({ iconType: 'info', title: `TuneGrab ${version} disponível`, content: 'Abra o TuneGrab e clique em "Atualizar agora".' })
+      }
+      montarMenuBandeja()
+    }
+    else if (manual) {
+      dialog.showMessageBox({ type: 'info', title: 'TuneGrab', message: `Você já está na versão mais nova (${app.getVersion()}).` })
+    }
+  }
+  catch (e) {
+    if (manual) dialog.showMessageBox({ type: 'warning', title: 'TuneGrab', message: 'Não deu para procurar atualizações agora.', detail: String(e.message || e) })
+  }
+}
+
+async function instalarAtualizacao() {
+  if (!atualizacao || instalando) return { ok: false }
+  instalando = true
+  const progresso = p => janela?.webContents.send('tunegrab:update-progress', p)
+  try {
+    const crypto = require('node:crypto')
+    // sha512 esperado (o latest.yml é gerado junto com o instalador)
+    const yml = await (await fetch(atualizacao.yml, { headers: { 'User-Agent': 'TuneGrab' } })).text()
+    const esperado = /^sha512:\s*(\S+)/m.exec(yml)?.[1]
+    if (!esperado) throw new Error('A versão publicada não tem a conferência do arquivo (latest.yml).')
+
+    const destino = path.join(app.getPath('temp'), `TuneGrab-Setup-${atualizacao.version}.exe`)
+    const r = await fetch(atualizacao.exe, { headers: { 'User-Agent': 'TuneGrab' } })
+    if (!r.ok || !r.body) throw new Error(`Download falhou (${r.status})`)
+    const total = Number(r.headers.get('content-length')) || atualizacao.size || 0
+    const hash = crypto.createHash('sha512')
+    const out = fs.createWriteStream(destino)
+    let baixado = 0
+    let ultimo = 0
+    for await (const parte of r.body) {
+      hash.update(parte)
+      baixado += parte.length
+      if (!out.write(parte)) await new Promise(res => out.once('drain', res))
+      if (Date.now() - ultimo > 200) {
+        ultimo = Date.now()
+        progresso({ fase: 'baixando', pct: total ? Math.round(baixado / total * 100) : 0 })
+      }
+    }
+    await new Promise((res, rej) => out.end(err => (err ? rej(err) : res())))
+    if (hash.digest('base64') !== esperado) {
+      fs.rmSync(destino, { force: true })
+      throw new Error('O arquivo baixado não confere com o publicado. Tente de novo.')
+    }
+
+    progresso({ fase: 'instalando', pct: 100 })
+    // instala sem perguntas (/S) e abre o TuneGrab de novo no final (--force-run)
+    spawn(destino, ['/S', '--updated', '--force-run'], { detached: true, stdio: 'ignore', windowsHide: true }).unref()
+    setTimeout(() => void sair(), 300)
+    return { ok: true }
+  }
+  catch (e) {
+    instalando = false
+    progresso({ fase: 'erro', erro: String(e.message || e) })
+    return { ok: false, erro: String(e.message || e) }
+  }
+}
+
+ipcMain.handle('tunegrab:update-info', () => ({ current: app.getVersion(), update: atualizacao }))
+ipcMain.handle('tunegrab:update-install', e => (janela && e.sender === janela.webContents ? instalarAtualizacao() : { ok: false }))
+
 // ---------- bandeja (perto do relógio) ----------
 function iniciaComWindows() {
   return app.getLoginItemSettings({ args: ['--hidden'] }).openAtLogin
@@ -325,10 +417,9 @@ function definirInicio(ligar) {
   app.setLoginItemSettings({ openAtLogin: ligar, args: ['--hidden'] })
 }
 
-function montarBandeja() {
-  bandeja = new Tray(nativeImage.createFromPath(caminhos.bandeja))
-  bandeja.setToolTip('TuneGrab')
-  const menu = () => Menu.buildFromTemplate([
+function montarMenuBandeja() {
+  if (!bandeja) return
+  bandeja.setContextMenu(Menu.buildFromTemplate([
     { label: 'Abrir o TuneGrab', click: abrirJanela },
     { label: 'Abrir no navegador', click: () => void shell.openExternal(url().replace('127.0.0.1', 'localhost')) },
     { type: 'separator' },
@@ -336,14 +427,24 @@ function montarBandeja() {
       label: 'Iniciar com o Windows', type: 'checkbox', checked: iniciaComWindows(),
       click: (item) => {
         definirInicio(item.checked)
-        bandeja.setContextMenu(menu())
+        montarMenuBandeja()
       },
     },
     { label: 'Pasta de dados (histórico, login)', click: () => void shell.openPath(dados) },
     { type: 'separator' },
+    atualizacao
+      ? { label: `Atualizar para a versão ${atualizacao.version}`, click: () => void instalarAtualizacao() }
+      : { label: 'Procurar atualizações', enabled: empacotado, click: () => void checarAtualizacao(true) },
+    { label: `Versão ${app.getVersion()}`, enabled: false },
+    { type: 'separator' },
     { label: 'Sair', click: () => sair() },
-  ])
-  bandeja.setContextMenu(menu())
+  ]))
+}
+
+function montarBandeja() {
+  bandeja = new Tray(nativeImage.createFromPath(caminhos.bandeja))
+  bandeja.setToolTip('TuneGrab')
+  montarMenuBandeja()
   bandeja.on('click', abrirJanela)
 }
 
@@ -387,4 +488,9 @@ app.whenReady().then(async () => {
   }
   if (!ESCONDIDO) abrirJanela()
   criarMini() // já pronta (escondida): ao minimizar aparece na hora
+  // atualizações: confere logo depois de abrir e a cada 6 h (só no programa instalado)
+  if (empacotado) {
+    setTimeout(() => void checarAtualizacao(), 8000)
+    setInterval(() => void checarAtualizacao(), 6 * 60 * 60 * 1000)
+  }
 })
