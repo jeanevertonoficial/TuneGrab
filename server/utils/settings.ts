@@ -1,5 +1,6 @@
-import { existsSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { dataDir } from './paths'
 import { jsonStore } from './store'
 
 export type CookieSource = 'none' | 'chrome' | 'edge' | 'brave' | 'opera' | 'firefox' | 'file'
@@ -29,7 +30,7 @@ export interface YoutubeAccount {
 export const hasLogin = () => cookieArgs().length > 0
 
 const store = jsonStore<Settings>('settings', { cookies: 'none' })
-export const cookieFile = join(process.cwd(), '.data', 'state', 'cookies.txt')
+export const cookieFile = join(dataDir, 'state', 'cookies.txt')
 
 export const getSettings = () => store.get()
 
@@ -39,6 +40,7 @@ export function setSettings(next: Partial<Settings>) {
 }
 
 export function saveCookieFile(text: string) {
+  mkdirSync(dirname(cookieFile), { recursive: true }) // instalação nova: a pasta ainda não existe
   writeFileSync(cookieFile, text, 'utf8')
 }
 

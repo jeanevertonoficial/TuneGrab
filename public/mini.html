@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TuneGrab</title>
+<link rel="icon" href="/favicon.svg">
+<style>
+  /* Janela flutuante do programa TuneGrab: o vídeo fica por cima de tudo, com o nome da música. */
+  :root { color-scheme: dark; --green: #0aed7c; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #000; color: #fff; font: 13px 'Segoe UI', system-ui, sans-serif; overflow: hidden; user-select: none; }
+  /* 100% limpa: só o vídeo; título, botões e controles aparecem ao passar o mouse */
+  .wrap { position: relative; height: 100%; }
+  /* barra de cima: arrastar move a janela */
+  .top {
+    position: absolute; z-index: 2; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 4px 6px 10px;
+    background: linear-gradient(rgba(0, 0, 0, .85), transparent); opacity: 0; transition: opacity .15s;
+    -webkit-app-region: drag; app-region: drag; /* invisível, mas dá para arrastar a janela por aqui */
+  }
+  .wrap:hover .top, .top:focus-within { opacity: 1; }
+  .top img { width: 13px; height: 16px; flex: none; }
+  .who { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.15; }
+  .who b, .who span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .who b { font-size: 12px; font-weight: 600; }
+  .who span { font-size: 11px; color: #9a9a9a; }
+  button { -webkit-app-region: no-drag; app-region: no-drag; background: none; border: 0; color: #cfcfcf; cursor: pointer; display: grid; place-items: center; border-radius: 6px; padding: 0; }
+  button:hover { color: #fff; background: rgba(255, 255, 255, .12); }
+  button:focus-visible { outline: 2px solid var(--green); }
+  .top button { width: 30px; height: 26px; }
+  .top .x:hover { background: #c42b1c; }
+  video { position: absolute; inset: 0; width: 100%; height: 100%; background: #000; display: block; object-fit: contain; }
+  /* quadro do app na hora de minimizar: a janela nunca aparece preta; some quando o vídeo daqui está no ponto */
+  .foto { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; transition: opacity .12s; pointer-events: none; }
+  .foto.off { opacity: 0; }
+  .foto:not([src]) { display: none; }
+  /* controles por cima do vídeo (aparecem com o mouse) */
+  .ctl {
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 22px 8px 6px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, .85)); opacity: 0; transition: opacity .15s;
+  }
+  .wrap:hover .ctl, .ctl:focus-within { opacity: 1; }
+  .row { display: flex; align-items: center; gap: 4px; }
+  .row button { width: 26px; height: 26px; flex: none; }
+  .row .play { width: 28px; height: 28px; border-radius: 50%; background: #fff; color: #000; margin-right: 2px; }
+  .row .play:hover { background: #fff; transform: scale(1.05); }
+  .t { font-variant-numeric: tabular-nums; font-size: 11px; color: #cfcfcf; min-width: 30px; text-align: center; flex: none; }
+  input[type=range] { flex: 1; min-width: 0; accent-color: var(--green); height: 4px; cursor: pointer; }
+  .spacer { flex: 1; }
+  .vol { display: flex; align-items: center; gap: 2px; }
+  .vol { flex: none; }
+  .vol input { width: 54px; flex: none; }
+  /* janela estreita: some o que é menos usado */
+  @media (max-width: 330px) { .vol input, #rew, #fwd { display: none; } }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="top">
+    <img src="/logo.svg" alt="">
+    <div class="who"><b id="title">TuneGrab</b><span id="artist"></span></div>
+    <button id="back" title="Voltar ao TuneGrab" aria-label="Voltar ao TuneGrab">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h18v8h-2V7H5v10h6v2H3V5Zm10 9h9v6h-9v-6Z" transform="rotate(180 12 12)"/></svg>
+    </button>
+    <button id="close" class="x" title="Fechar (pausa o vídeo)" aria-label="Fechar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+  <video id="v" playsinline muted></video>
+  <img id="foto" class="foto" alt="">
+  <div class="ctl">
+    <div class="row">
+      <button id="play" class="play" title="Tocar/pausar (Espaço)" aria-label="Tocar ou pausar"></button>
+      <button id="rew" title="Voltar 10 s" aria-label="Voltar 10 segundos"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V2L7 6l5 4V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8Z"/></svg></button>
+      <button id="fwd" title="Avançar 10 s" aria-label="Avançar 10 segundos"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V2l5 4-5 4V7a6 6 0 1 0 6 6h2a8 8 0 1 1-8-8Z"/></svg></button>
+      <span class="t" id="cur">0:00</span>
+      <input id="seek" type="range" min="0" max="0" step="0.1" value="0" aria-label="Posição do vídeo">
+      <span class="t" id="dur">0:00</span>
+      <div class="vol">
+        <button id="mute" title="Sem som (M)" aria-label="Sem som"></button>
+        <input id="volume" type="range" min="0" max="1" step="0.05" aria-label="Volume">
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  // O som fica sempre no app: aqui é só a imagem, sem som, acompanhando o player do app.
+  // Os botões mandam no player do app; o que aparece (tempo, pausado, volume) vem dele.
+  const $ = id => document.getElementById(id)
+  const v = $('v')
+  const foto = $('foto')
+  const bridge = window.tunegrabDesktop
+  v.muted = true // nunca toca som aqui (senão a música sairia em dobro)
+  v.defaultMuted = true
+  v.addEventListener('volumechange', () => { if (!v.muted) v.muted = true })
+
+  const fmt = (s) => {
+    s = Math.max(0, Math.floor(s || 0))
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = String(s % 60).padStart(2, '0')
+    return h ? `${h}:${String(m).padStart(2, '0')}:${x}` : `${m}:${x}`
+  }
+  const ICON_PLAY = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'
+  const ICON_PAUSE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>'
+  const ICON_VOL = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3Zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4Z"/></svg>'
+  const ICON_MUTE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3Zm13.6 3 2.7-2.7-1.4-1.4-2.7 2.7-2.7-2.7-1.4 1.4 2.7 2.7-2.7 2.7 1.4 1.4 2.7-2.7 2.7 2.7 1.4-1.4-2.7-2.7Z"/></svg>'
+  const cmd = c => bridge?.miniCmd(c)
+
+  /** estado do player do app: t = segundo quando foi medido (at, relógio do computador) */
+  let st = { t: 0, at: Date.now(), paused: true, rate: 1, volume: 1, muted: false, duration: 0, stalled: false }
+  let ativo = false // janela visível acompanhando
+  const alvo = () => st.paused || st.stalled ? st.t : st.t + ((Date.now() - st.at) / 1000) * st.rate
+
+  // ---- interface (vem do app) ----
+  let dragging = false
+  function pintar() {
+    $('play').innerHTML = st.paused ? ICON_PLAY : ICON_PAUSE
+    $('mute').innerHTML = st.muted || st.volume === 0 ? ICON_MUTE : ICON_VOL
+    if (document.activeElement !== $('volume')) $('volume').value = st.muted ? 0 : st.volume
+    $('seek').max = st.duration || 0
+    $('dur').textContent = fmt(st.duration)
+    if (!dragging) {
+      const t = alvo()
+      $('seek').value = t
+      $('cur').textContent = fmt(t)
+    }
+  }
+
+  // ---- imagem acompanhando o som do app ----
+  // Diferença pequena: acelera/desacelera um pouco (imperceptível, não tem som aqui);
+  // grande (pulou, trocou de faixa): vai direto. Objetivo: imagem e som juntos (±50 ms).
+  function acompanhar() {
+    if (!ativo || !v.src || v.readyState < 1) return
+    const t = alvo()
+    if (st.paused || st.stalled) {
+      if (!v.paused) v.pause()
+      if (Math.abs(v.currentTime - t) > 0.05 && !v.seeking) v.currentTime = t
+      v.playbackRate = 1
+      return
+    }
+    const d = t - v.currentTime // positivo: a imagem está atrás do som
+    if (Math.abs(d) > 0.6) {
+      if (!v.seeking) v.currentTime = t + 0.15 // o pulo leva um instante
+    }
+    else if (Math.abs(d) > 0.03) v.playbackRate = st.rate * (1 + Math.max(-0.1, Math.min(0.1, d)))
+    else v.playbackRate = st.rate
+    if (v.paused) v.play().catch(() => {})
+  }
+  setInterval(() => { if (ativo) { acompanhar(); pintar() } }, 100)
+
+  // a foto (quadro do app na hora de minimizar) some quando o vídeo daqui já está no ponto certo
+  function esperarQuadro() {
+    if (!('requestVideoFrameCallback' in v)) return foto.classList.add('off')
+    v.requestVideoFrameCallback((_n, meta) => {
+      if (!ativo) return
+      if (Math.abs(meta.mediaTime - alvo()) < 0.12 || (st.paused && Math.abs(meta.mediaTime - st.t) < 0.12)) foto.classList.add('off')
+      else esperarQuadro()
+    })
+  }
+
+  /** o programa abre a janelinha (ou troca o vídeo, se mudou de faixa com o app minimizado) */
+  window.__miniShow = async (p) => {
+    document.title = p.artist ? `${p.title} · ${p.artist}` : p.title
+    $('title').textContent = p.title || 'TuneGrab'
+    $('artist').textContent = p.artist || ''
+    st = { ...st, ...p.state }
+    ativo = true
+    if (p.poster) {
+      foto.src = p.poster
+      foto.classList.remove('off')
+      await foto.decode().catch(() => {})
+    }
+    else foto.classList.add('off')
+    if (v.getAttribute('src') !== p.src) {
+      v.src = p.src
+      v.preload = 'auto'
+    }
+    const ir = () => {
+      v.currentTime = alvo() + (st.paused ? 0 : 0.15)
+      acompanhar()
+      esperarQuadro()
+    }
+    if (v.readyState >= 1) ir()
+    else v.addEventListener('loadedmetadata', ir, { once: true })
+    pintar()
+    // se o vídeo daqui demorar, a foto não fica para sempre
+    setTimeout(() => foto.classList.add('off'), 4000)
+    return true
+  }
+  /** voltou ao app: para a imagem (o arquivo continua carregado: a próxima vez é instantânea) */
+  window.__miniHide = () => {
+    ativo = false
+    v.pause()
+  }
+
+  bridge?.onState((s) => {
+    st = s
+    if (ativo) {
+      acompanhar()
+      pintar()
+    }
+  })
+
+  // ---- botões → player do app ----
+  $('seek').addEventListener('input', () => { dragging = true; $('cur').textContent = fmt(Number($('seek').value)) })
+  $('seek').addEventListener('change', () => {
+    const t = Number($('seek').value)
+    st = { ...st, t, at: Date.now() }
+    v.currentTime = t // a imagem já vai junto
+    cmd({ type: 'seek', t })
+    dragging = false
+  })
+  const tocar = () => cmd({ type: 'toggle' })
+  const pular = d => cmd({ type: 'seek', t: Math.max(0, Math.min(st.duration || Infinity, alvo() + d)) })
+  $('play').onclick = tocar
+  $('rew').onclick = () => pular(-10)
+  $('fwd').onclick = () => pular(10)
+  $('mute').onclick = () => cmd({ type: 'mute' })
+  $('volume').addEventListener('input', () => cmd({ type: 'volume', v: Number($('volume').value) }))
+  v.ondblclick = () => bridge?.miniBack()
+  foto.ondblclick = () => bridge?.miniBack()
+  $('back').onclick = () => bridge?.miniBack()
+  $('close').onclick = () => bridge?.miniClose()
+  document.addEventListener('keydown', (e) => {
+    if (e.target === $('seek') || e.target === $('volume')) return
+    if (e.code === 'Space') { e.preventDefault(); tocar() }
+    else if (e.code === 'ArrowRight') pular(5)
+    else if (e.code === 'ArrowLeft') pular(-5)
+    else if (e.code === 'KeyM') cmd({ type: 'mute' })
+  })
+  pintar()
+</script>
+</body>
+</html>

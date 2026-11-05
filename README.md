@@ -12,10 +12,11 @@
 
 ## Sumário
 
-- [Como rodar](#como-rodar)
+- [Programa para Windows (recomendado)](#programa-para-windows-recomendado)
+- [Como rodar pelo código](#como-rodar-pelo-código)
 - [Instalar como aplicativo (PWA)](#instalar-como-aplicativo-pwa)
 - [Recursos](#recursos)
-  - [Baixar](#baixar) · [Busca por nome e pré-lista](#busca-por-nome-e-pré-lista) · [Ouvir antes de baixar](#ouvir-antes-de-baixar)
+  - [Baixar](#baixar) · [Busca por nome e pré-lista](#busca-por-nome-e-pré-lista) · [Ouvir (e ver) antes de baixar](#ouvir-e-ver-antes-de-baixar)
   - [Conta do YouTube](#conta-do-youtube-login-guiado) · [Letras](#letras-sincronizadas)
   - [Pendrive e pastas](#salvar-direto-no-pendrive-ou-em-qualquer-pasta) · [Arquivos](#gerenciador-de-arquivos) · [Biblioteca](#biblioteca) · [Repetidas](#repetidas) · [Formatar pendrive](#formatar-pendrive)
   - [Player e vídeo](#player-e-vídeo) · [Favoritas e recentes](#favoritas-e-tocadas-recentemente) · [Continua de onde parou](#continua-de-onde-parou)
@@ -28,7 +29,39 @@
 
 ---
 
-## Como rodar
+## Programa para Windows (recomendado)
+
+O TuneGrab vira um **programa instalável** (`TuneGrab-Setup-x.y.z.exe`, ~150 MB) — feito com Electron, como o Spotify e o Discord.
+Não precisa de Node, terminal nem `npm run dev`: o servidor, o **yt-dlp** e o **ffmpeg** vão dentro.
+
+**⬇️ Baixar:** [última versão do instalador](https://github.com/jeanevertonoficial/TuneGrab/releases/latest/download/TuneGrab-Setup.exe)
+(ou veja todas em [Releases](https://github.com/jeanevertonoficial/TuneGrab/releases)). Baixe, abra e pronto —
+instala só para o seu usuário, sem pedir administrador. O Windows pode avisar "editor desconhecido"
+(o instalador não tem assinatura paga): **Mais informações → Executar assim mesmo**.
+
+**Sempre no ar:**
+
+- **Inicia com o Windows** (escondido, perto do relógio) — o servidor já fica pronto. Dá para desligar no menu do ícone.
+- **Fechar a janela não desliga:** o app continua na bandeja (perto do relógio), terminando os downloads.
+  Clique no ícone para abrir de novo; **botão direito → Sair** para fechar de vez.
+- Com o app rodando, **http://localhost:47800** também abre no Chrome (e dá para instalar como PWA por lá).
+- Se o servidor interno cair, ele religa sozinho.
+
+**Gerar o instalador:**
+
+```bash
+npm run dist     # cria release/TuneGrab-Setup-1.0.0.exe
+npm run desktop  # testa o programa sem instalar
+```
+
+Instalação por usuário (sem pedir administrador), em `%LOCALAPPDATA%\Programs\TuneGrab`, com atalhos na área de trabalho e no
+menu Iniciar. Os dados ficam em **`%APPDATA%\TuneGrab`** (veja [Seus dados](#seus-dados-e-privacidade)) e continuam lá ao atualizar
+ou desinstalar. Para atualizar, gere e instale um novo `.exe` por cima.
+
+> A versão publicada na Vercel (ou em qualquer nuvem) só mostra a interface: pendrive, login e downloads precisam rodar
+> **no seu computador**.
+
+## Como rodar pelo código
 
 Requisitos: **Node.js 22.21+** (ou 24.11+) e, para o login do YouTube, **Google Chrome ou Microsoft Edge**.
 
@@ -98,11 +131,14 @@ Mudou o símbolo? Rode `npm run icons`: ele gera favicon, ícones do app, Androi
 - **Buscas recentes**: aparecem ao clicar no campo (com ↑ ↓ e Enter) e numa faixa abaixo dele, mostrando quantas músicas de cada busca estão na pré-lista.
 - Pré-lista e histórico ficam salvos neste navegador.
 
-### Ouvir antes de baixar
+### Ouvir (e ver) antes de baixar
 
 - Passe o mouse na capa de qualquer música do YouTube (busca, pré-lista, playlist, canal) e clique em ▶.
 - Toca direto do YouTube, sem salvar nada; a lista segue tocando.
 - A primeira música leva ~5–9 s para começar (tempo do YouTube); a **próxima já é preparada** enquanto a atual toca (~0,4 s).
+- **Ver o vídeo:** botão de tela ao lado da duração (passe o mouse na música), ou o mesmo botão no player para alternar
+  **só áudio ↔ vídeo** no mesmo ponto. O vídeo da prévia é **360p** — é o único arquivo com imagem e som juntos que o
+  YouTube entrega; para alta qualidade, baixe em MP4 (até 1080p).
 
 ### Conta do YouTube (login guiado)
 
@@ -124,6 +160,7 @@ Com a conta conectada:
 ### Letras sincronizadas
 
 - Botão de **microfone** no player: abre a letra; a linha cantada fica em destaque e a tela acompanha.
+- Mudou de tela com a letra aberta? Ela **encolhe para um cartão no canto** (linha atual + próxima). Clique para ampliar; × fecha.
 - Clique numa linha para ir até aquele trecho. **Esc** fecha.
 - A letra vem do **próprio arquivo** (quando gravada) ou do acervo aberto [LRCLIB](https://lrclib.net); as encontradas ficam guardadas.
 - **Gravar a letra ao baixar** (Configurações → Letras, ligado por padrão):
@@ -176,6 +213,11 @@ Com a conta conectada:
 | F | vídeo em tela cheia |
 | Esc | fechar letra / reduzir vídeo |
 | Tab até a barra de tempo, depois ← → / Page Up/Down / Home/End | 5 s / 30 s / início e fim |
+- **Janela flutuante:** no programa instalado, minimizar o app com um vídeo tocando faz o vídeo ficar **por cima de todas as
+  janelas**, no canto — arraste para onde quiser e mude o tamanho pela borda. Ao voltar ao app, ela fecha sozinha.
+  O som nunca sai do app (a janelinha mostra só a imagem, acompanhando): minimizar e voltar não pausam, não pulam
+  e não repetem nada; os botões dela comandam o player do app.
+  Também dá para abrir pelo botão de janela flutuante no painel de vídeo (funciona no Chrome).
 - Vídeos num painel **mini**, **expandido** ou **tela cheia** (F). Se a imagem travar na troca de vídeo
   (comum com a janela minimizada), o app redesenha sozinho.
 - A música tocando fica em destaque nas listas.
@@ -207,7 +249,7 @@ Esse é o próximo passo planejado.
 
 ## Seus dados e privacidade
 
-Tudo fica neste computador, em `.data/state/` (fora do Git):
+Tudo fica neste computador, numa pasta **state**: no programa instalado em `%APPDATA%\TuneGrab\state`; rodando pelo código em `.data/state/` (fora do Git):
 
 | Arquivo | Conteúdo |
 |---|---|
@@ -218,7 +260,7 @@ Tudo fica neste computador, em `.data/state/` (fora do Git):
 | `cookies.txt` | sessão do YouTube (login guiado). **Não compartilhe este arquivo** |
 | `lyrics.json`, `meta-cache.json`, `drives.json` | caches de letras, tags e unidades |
 
-A janela de login usa o perfil `.data/yt-profile`. **Sair da conta** apaga a sessão e esse perfil.
+A janela de login usa o perfil `yt-profile` (na mesma pasta). Os registros do programa ficam em `%APPDATA%\TuneGrab\logs`. **Sair da conta** apaga a sessão e esse perfil.
 O app só fala com YouTube, Spotify/Deezer (para ler listas) e LRCLIB (letras).
 
 ## Solução de problemas
@@ -227,6 +269,7 @@ O app só fala com YouTube, Spotify/Deezer (para ler listas) e LRCLIB (letras).
 |---|---|
 | "Confirme que não é um robô" | Entre com a conta (Seu YouTube → Entrar). Já conectado? Menu da conta → **Renovar login**. Ou espere algumas horas |
 | Downloads falhando de repente | O YouTube mudou: `npm run setup` atualiza o yt-dlp |
+| Programa não abre / tela vazia | Veja `%APPDATA%\TuneGrab\logs\servidor.log`. Ícone perto do relógio → Sair, e abra de novo |
 | "Another Nuxt dev server is already running" | O TuneGrab já está aberto: use http://localhost:3000. Para fechar o antigo: `taskkill /PID <número> /F` |
 | Chave de acesso do Google falha no login | Na tela do Google, **Tentar de outra forma** → senha ou confirmação no celular |
 | Letra não aparece | O acervo pode estar ocupado (**Tentar de novo**) ou não ter a música; versões ao vivo podem ficar dessincronizadas |
@@ -238,6 +281,7 @@ O app só fala com YouTube, Spotify/Deezer (para ler listas) e LRCLIB (letras).
 npm run setup   # atualiza o yt-dlp (o YouTube muda com frequência)
 npm run icons   # gera todas as variações da logo a partir de brand/symbol.svg
 npm run build   # confere se tudo compila
+npm run dist    # gera o instalador do programa (release/)
 ```
 
 - Para usar um yt-dlp/ffmpeg já instalado no sistema, defina `YTDLP_PATH` e/ou `FFMPEG_PATH`.
@@ -270,6 +314,7 @@ app/
   plugins/pwa.client.ts   registra o service worker
 public/         logo, ícones, manifest.webmanifest, sw.js
 brand/          arte original da logo e o símbolo em vetor (symbol.svg)
+electron/       programa para Windows: main.cjs (janela, servidor interno, bandeja, iniciar com o Windows)
 scripts/        setup-ytdlp.mjs, make-icons.mjs
 ```
 

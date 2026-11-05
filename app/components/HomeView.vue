@@ -276,13 +276,20 @@ async function fillDetails(value: string) {
 
 const me = useMe()
 const view = useState<string>('view')
-const { playList, current: nowPlaying, toggle: togglePlay } = usePlayer()
+const { playList, current: nowPlaying, toggle: togglePlay, togglePreviewVideo } = usePlayer()
 
 /** Ouvir antes de baixar: toca a lista que está na tela (vídeos do YouTube) a partir da clicada. */
-function listen(id: string) {
-  if (nowPlaying.value?.key === previewKey(id)) return togglePlay()
+function listen(id: string, video = false) {
+  const cur = nowPlaying.value
+  if (cur?.key === previewKey(id)) {
+    // a mesma música: "ver vídeo" troca para o vídeo; ouvir de novo pausa/toca
+    if (video && !cur.video) return togglePreviewVideo()
+    return togglePlay()
+  }
   const list = shownTracks.value.filter(t => /^[\w-]{11}$/.test(t.id) && /youtu/.test(t.url))
-  playList(list.map(trackToPreview), Math.max(0, list.findIndex(t => t.id === id)))
+  const start = Math.max(0, list.findIndex(t => t.id === id))
+  // a clicada vai com vídeo (se pediu); as próximas da lista, só áudio
+  playList(list.map((t, i) => trackToPreview(t, video && i === start)), start)
 }
 const brokenCovers = reactive(new Set<string>())
 const recentShelf = computed(() => me.recent.value.slice(0, me.favorites.value.length ? 7 : 8))

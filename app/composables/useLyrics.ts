@@ -9,6 +9,17 @@ export interface Lyrics {
 /** Letra da música que está tocando (busca quando o painel de letra está aberto). */
 export function useLyrics() {
   const open = useState('lyricsOpen', () => false)
+  /** letra aberta, mas pequena no canto (ao navegar para outra tela) */
+  const mini = useState('lyricsMini', () => false)
+
+  /** botão de letra / tecla L: fechada → grande; mini → grande; grande → fecha */
+  function toggle() {
+    if (open.value && mini.value) mini.value = false
+    else {
+      open.value = !open.value
+      mini.value = false
+    }
+  }
   const data = useState<Lyrics | null>('lyricsData', () => null)
   const forKey = useState<string | null>('lyricsKey', () => null)
   const loading = useState('lyricsLoading', () => false)
@@ -39,5 +50,5 @@ export function useLyrics() {
     loading.value = false
   }
 
-  return { open, data, loading, load }
+  return { open, mini, toggle, data, loading, load }
 }

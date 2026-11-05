@@ -10,7 +10,7 @@ const props = defineProps<{
   /** mostra o botão "ouvir" (vídeos do YouTube, antes de baixar) */
   preview?: boolean
 }>()
-const emit = defineEmits<{ toggle: [id: string], toggleAll: [], play: [index: number], preview: [id: string] }>()
+const emit = defineEmits<{ toggle: [id: string], toggleAll: [], play: [index: number], preview: [id: string, video?: boolean] }>()
 
 const { current, playing, buffering } = usePlayer()
 /** dá para ouvir antes de baixar: vídeo do YouTube (busca, playlist, canal, pré-lista) */
@@ -147,7 +147,13 @@ const asItem = (t: Track | JobItem) => ('status' in t ? t : null)
         </template>
       </div>
 
-      <span class="dur">{{ formatDuration(t.duration) }}</span>
+      <span class="dur">
+        <!-- ver o vídeo (360p) sem baixar -->
+        <button v-if="canPreview(t)" class="watch" title="Ver vídeo" aria-label="Ver vídeo" @click.stop="emit('preview', t.id, true)">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M3 5h18v14H3V5Zm2 2v10h14V7H5Zm5 2 5 3-5 3V9Z" /></svg>
+        </button>
+        <span class="dur-t">{{ formatDuration(t.duration) }}</span>
+      </span>
     </div>
     <div ref="sentinel" class="sentinel" />
     <p v-if="limit < tracks.length" class="more">Carregando mais… ({{ limit }} de {{ tracks.length }})</p>
@@ -157,7 +163,7 @@ const asItem = (t: Track | JobItem) => ('status' in t ? t : null)
 <style scoped>
 .table { padding: 0 24px 32px; }
 .row {
-  display: grid; grid-template-columns: 40px minmax(0, 1fr) 64px; align-items: center; gap: 16px;
+  display: grid; grid-template-columns: 40px minmax(0, 1fr) 96px; align-items: center; gap: 16px;
   height: 56px; padding: 0 16px; border-radius: 4px; color: var(--subdued); font-size: 14px;
   /* linhas fora da tela não são desenhadas pelo navegador */
   content-visibility: auto; contain-intrinsic-size: auto 56px;
@@ -166,6 +172,10 @@ const asItem = (t: Track | JobItem) => ('status' in t ? t : null)
 .sentinel { height: 1px; }
 .more { color: var(--muted); font-size: 13px; padding: 8px 16px; margin: 0; }
 .withStatus .row { grid-template-columns: 40px minmax(0, 1fr) minmax(120px, 220px) 64px; }
+.dur { gap: 10px; align-items: center; }
+.watch { display: grid; place-items: center; color: var(--subdued); opacity: 0; transition: opacity .12s; }
+.row:hover .watch, .watch:focus-visible { opacity: 1; }
+.watch:hover { color: #fff; }
 .row:not(.head):hover { background: rgba(255, 255, 255, .1); }
 .selectable .row:not(.head) { cursor: pointer; }
 /* desmarcada fica apagada, mas acende ao passar o mouse e quando está tocando */

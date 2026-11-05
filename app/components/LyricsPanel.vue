@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /** Letra da música que está tocando: a linha cantada fica em destaque e a tela acompanha (como no Spotify). */
-const { open, data, loading, load } = useLyrics()
+const { open, mini, data, loading, load } = useLyrics()
 const { current, playing, seek, toggle } = usePlayer()
 
 watch([open, () => current.value?.key], ([o]) => {
@@ -38,7 +38,7 @@ function onWheel() {
   userScrollAt = Date.now()
 }
 watch(active, async (i) => {
-  if (i < 0 || Date.now() - userScrollAt < 3000) return
+  if (mini.value || i < 0 || Date.now() - userScrollAt < 3000) return
   await nextTick()
   box.value?.querySelector<HTMLElement>(`[data-i="${i}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
 })
@@ -50,8 +50,26 @@ function jump(t: number) {
 }
 
 function onKey(e: KeyboardEvent) {
-  if (e.key === 'Escape') open.value = false
+  if (e.key === 'Escape' && !mini.value) open.value = false
 }
+
+// voltou para o modo grande: a tela vai direto para a linha atual
+watch(mini, async (m) => {
+  if (m) return
+  await nextTick()
+  box.value?.querySelector<HTMLElement>(`[data-i="${active.value}"]`)?.scrollIntoView({ block: 'center' })
+})
+
+/** cartão pequeno: a linha cantada e a próxima */
+const miniLines = computed(() => {
+  const l = lines.value
+  if (l?.length) {
+    const i = Math.max(0, active.value)
+    return { now: l[i]?.text || '♪', next: l.slice(i + 1).find(x => x.text)?.text ?? '' }
+  }
+  const first = data.value?.plain?.split(/\r?\n/).find(Boolean)
+  return { now: first ?? '', next: '' }
+})
 onMounted(() => window.addEventListener('keydown', onKey))
 onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 
@@ -66,7 +84,26 @@ const bg = computed(() => {
 </script>
 
 <template>
-  <section class="lyrics" :style="{ '--bg': bg }">
+  <!-- pequeno no canto (ao navegar): clique para ampliar -->
+  <aside v-if="mini" class="lyrics-mini" :style="{ '--bg': bg }" role="region" aria-label="Letra">
+    <header class="m-top">
+      <span class="m-label"><Icon name="mic" :size="13" /> Letra</span>
+      <button class="m-btn" title="Ampliar a letra" aria-label="Ampliar a letra" @click="mini = false">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M4 4h6v2H6v4H4V4Zm10 0h6v6h-2V6h-4V4ZM4 14h2v4h4v2H4v-6Zm14 0h2v6h-6v-2h4v-4Z" /></svg>
+      </button>
+      <button class="m-btn" title="Fechar letra" aria-label="Fechar letra" @click="open = false"><Icon name="close" :size="16" /></button>
+    </header>
+    <button class="m-body" title="Ampliar a letra" @click="mini = false">
+      <template v-if="loading"><span class="m-next">Procurando a letra…</span></template>
+      <template v-else-if="miniLines.now">
+        <span class="m-now">{{ miniLines.now }}</span>
+        <span v-if="miniLines.next" class="m-next">{{ miniLines.next }}</span>
+      </template>
+      <span v-else class="m-next">Letra não disponível</span>
+    </button>
+  </aside>
+
+  <section v-else class="lyrics" :style="{ '--bg': bg }">
     <header class="top">
       <div class="who">
         <img v-if="current?.cover" :src="current.cover" alt="" referrerpolicy="no-referrer">
@@ -143,7 +180,22 @@ p.state { flex-direction: row; align-items: center; }
 .spin { animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ---- cartão pequeno no canto ---- */
+.lyrics-mini {
+  position: fixed; left: 344px; bottom: 96px; z-index: 40; width: 340px; max-width: calc(100vw - 32px);
+  border-radius: 10px; overflow: hidden; box-shadow: 0 12px 40px rgba(0, 0, 0, .55);
+  background: linear-gradient(160deg, var(--bg), color-mix(in srgb, var(--bg) 50%, #000));
+}
+.m-top { display: flex; align-items: center; gap: 4px; padding: 8px 8px 0 14px; }
+.m-label { display: inline-flex; align-items: center; gap: 6px; flex: 1; font-size: 11px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: rgba(255, 255, 255, .75); }
+.m-btn { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: rgba(255, 255, 255, .8); }
+.m-btn:hover { color: #fff; background: rgba(0, 0, 0, .25); }
+.m-body { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 6px 14px 14px; text-align: left; }
+.m-now { font-size: 18px; font-weight: 800; line-height: 1.25; color: #fff; }
+.m-next { font-size: 14px; font-weight: 700; line-height: 1.3; color: rgba(255, 255, 255, .55); }
+
 @media (max-width: 860px) {
+  .lyrics-mini { left: 16px; }
   /* tela estreita: a barra lateral vira uma linha em cima; a letra ocupa o lugar da tela principal */
   .lyrics { grid-column: 1; grid-row: 2; }
   .body { padding: 8px 20px 40vh; }

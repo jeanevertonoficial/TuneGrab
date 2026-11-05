@@ -29,9 +29,11 @@ export function fileToPlayItem(f: { path: string, name: string, title?: string |
 export const previewKey = (id: string) => `yt:${id}`
 
 /** Música do YouTube (busca, playlist…) tocada direto do YouTube, sem baixar. Não entra nas Recentes. */
-export function trackToPreview(t: { id: string, title: string, artist: string, thumbnail: string | null }): PlayItem {
-  return { key: previewKey(t.id), src: `/api/preview/${t.id}`, title: t.title, artist: t.artist, cover: t.thumbnail }
+export function trackToPreview(t: { id: string, title: string, artist: string, thumbnail: string | null }, video = false): PlayItem {
+  return { key: previewKey(t.id), src: previewSrc(t.id, video), title: t.title, artist: t.artist, cover: t.thumbnail, video }
 }
+/** prévia só com áudio (melhor qualidade) ou com vídeo (360p: o único arquivo único que o YouTube entrega) */
+const previewSrc = (id: string, video: boolean) => `/api/preview/${id}${video ? '?video=1' : ''}`
 
 /** URL da capa; o "v" muda quando o arquivo é editado, para o navegador não mostrar a capa antiga */
 export function coverUrl(path: string, mtime?: number) {
@@ -351,6 +353,19 @@ export function usePlayer() {
     load(index.value, state.playing, state.time)
   }
 
+  /** Prévia do YouTube: troca entre só áudio e vídeo, continuando do mesmo ponto. */
+  function togglePreviewVideo() {
+    const item = current.value
+    const a = el()
+    if (!item || !a || !item.key.startsWith('yt:')) return
+    const id = item.key.slice(3)
+    const video = !item.video
+    const state = { time: a.currentTime, playing: !a.paused || wantPlay }
+    queue.value[index.value] = { ...item, video, src: previewSrc(id, video) }
+    if (video) videoMode.value = videoMode.value === 'hidden' ? 'mini' : videoMode.value
+    load(index.value, state.playing, state.time)
+  }
+
   /**
    * Volta para onde a música está tocando (pasta, download, busca, pré-lista, favoritas…)
    * e pede para a lista rolar até ela.
@@ -374,5 +389,5 @@ export function usePlayer() {
     revealReq.value = { key: cur.key, at: Date.now() }
   }
 
-  return { origin, reveal, revealReq, el, restore, videoMode, buffering, queue, index, current, playing, time, duration, volume, muted, shuffle, repeat, playList, toggle, next, prev, seek, setVolume, toggleMute, cycleRepeat, forget, release, reload }
+  return { origin, reveal, revealReq, togglePreviewVideo, el, restore, videoMode, buffering, queue, index, current, playing, time, duration, volume, muted, shuffle, repeat, playList, toggle, next, prev, seek, setVolume, toggleMute, cycleRepeat, forget, release, reload }
 }

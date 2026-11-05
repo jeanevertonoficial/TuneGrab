@@ -1,7 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { dataDir } from './paths'
 
-const dir = join(process.cwd(), '.data', 'state')
+const dir = join(dataDir, 'state')
 
 // ao fechar o app, grava na hora o que ainda estava esperando o atraso (senão perdia o último segundo)
 const pending = new Set<() => void>()

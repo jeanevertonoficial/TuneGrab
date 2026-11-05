@@ -47,7 +47,7 @@ function onKey(e: KeyboardEvent) {
   else if (e.code === 'ArrowRight' && a) p.seek(Math.min(a.currentTime + 5, a.duration || Infinity))
   else if (e.code === 'ArrowLeft' && a) p.seek(Math.max(0, a.currentTime - 5))
   else if (e.code === 'KeyM') p.toggleMute()
-  else if (e.code === 'KeyL') lyrics.open.value = !lyrics.open.value
+  else if (e.code === 'KeyL') lyrics.toggle()
   else return
   e.preventDefault()
 }
@@ -111,8 +111,15 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
         <Icon name="loader" :size="16" class="spin" />
         {{ running.length > 1 ? `${running.length} downloads` : 'Baixando' }} • {{ Math.round(runningPct) }}%
       </button>
+      <!-- prévia do YouTube: alterna só áudio ↔ vídeo (360p) no mesmo ponto -->
       <button
-        v-if="p.current.value?.video" class="ctl" :class="{ on: p.videoMode.value !== 'hidden' }"
+        v-if="p.current.value?.key.startsWith('yt:')" class="ctl" :class="{ on: p.current.value.video }"
+        :title="p.current.value.video ? 'Só áudio (melhor som)' : 'Ver vídeo'" @click="p.togglePreviewVideo()"
+      >
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 5h18v14H3V5Zm2 2v10h14V7H5Zm5 2 5 3-5 3V9Z" /></svg>
+      </button>
+      <button
+        v-else-if="p.current.value?.video" class="ctl" :class="{ on: p.videoMode.value !== 'hidden' }"
         :title="p.videoMode.value === 'hidden' ? 'Mostrar vídeo' : 'Esconder vídeo'"
         @click="p.videoMode.value = p.videoMode.value === 'hidden' ? 'mini' : 'hidden'"
       >
@@ -120,7 +127,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
       </button>
       <button
         class="ctl" :class="{ on: lyrics.open.value }" :disabled="!p.current.value"
-        :title="lyrics.open.value ? 'Fechar letra' : 'Letra'" @click="lyrics.open.value = !lyrics.open.value"
+        :title="lyrics.open.value && !lyrics.mini.value ? 'Fechar letra' : 'Letra'" @click="lyrics.toggle()"
       >
         <Icon name="mic" :size="18" />
       </button>

@@ -1,0 +1,8 @@
+{
+  "name": "tunegrab",
+  "productName": "TuneGrab",
+  "version": "1.0.0",
+  "description": "Baixe músicas, playlists e vídeos e salve direto no pendrive.",
+  "author": "Jean Everton",
+  "main": "main.cjs"
+}

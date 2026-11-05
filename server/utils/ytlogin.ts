@@ -1,9 +1,10 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, rmSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { join } from 'node:path'
-import { cookieFile, getSettings, setSettings, type YoutubeAccount } from './settings'
+import { cookieFile, getSettings, saveCookieFile, setSettings, type YoutubeAccount } from './settings'
+import { dataDir } from './paths'
 import { clearInfoCache } from './ytdlp'
 
 /**
@@ -14,7 +15,7 @@ import { clearInfoCache } from './ytdlp'
  * e grava no cookies.txt que o yt-dlp usa. O Chrome do dia a dia não é tocado.
  */
 
-const profileDir = join(process.cwd(), '.data', 'yt-profile')
+const profileDir = join(dataDir, 'yt-profile')
 const LOGIN_URL = 'https://accounts.google.com/ServiceLogin?service=youtube&hl=pt-BR&continue=https%3A%2F%2Fwww.youtube.com%2F'
 
 let win: { proc: ChildProcess, name: string } | null = null
@@ -175,7 +176,7 @@ function closeWindow() {
 
 /** salva a sessão e liga o login nos downloads */
 async function complete(list: Cookie[]): Promise<LoginStatus> {
-  writeFileSync(cookieFile, toNetscape(list), 'utf8')
+  saveCookieFile(toNetscape(list))
   const account = await fetchAccount(list) ?? { name: 'Conta do YouTube', handle: null, photo: null, at: Date.now() }
   setSettings({ cookies: 'file', account })
   clearInfoCache() // listas privadas (curtidas, playlists) agora aparecem
@@ -274,7 +275,7 @@ export async function renewLogin(): Promise<boolean> {
   if (win || finishing) return false
   const list = await harvest()
   if (!list) return false
-  writeFileSync(cookieFile, toNetscape(list), 'utf8')
+  saveCookieFile(toNetscape(list))
   setSettings({ cookies: 'file', account: await fetchAccount(list) ?? getSettings().account })
   return true
 }

@@ -8,21 +8,22 @@ const me = useMe()
 const player = usePlayer()
 // também aberto pelo aviso de bloqueio do YouTube (JobView)
 const settingsOpen = useState('settingsOpen', () => false)
-const { open: lyricsOpen } = useLyrics()
+const { open: lyricsOpen, mini: lyricsMini } = useLyrics()
 const pwa = usePwa()
 
-// título da aba/janela: o que está tocando; senão, a tela atual (ajuda a achar a aba e a janela do app instalado)
-const VIEW_NAMES: Record<string, string> = {
-  home: 'Baixar', job: 'Download', files: 'Arquivos', library: 'Biblioteca',
-  duplicates: 'Repetidas', favorites: 'Favoritas', recent: 'Tocadas recentemente',
-}
-useHead({
-  title: computed(() => {
-    const cur = player.current.value
-    if (cur && player.playing.value) return `${cur.title}${cur.artist ? ` · ${cur.artist}` : ''} — TuneGrab`
-    return `${VIEW_NAMES[view.value] ?? 'TuneGrab'} — TuneGrab`
-  }),
+// letra aberta e a pessoa foi para outra tela (menu, pasta, download, outra busca): a letra encolhe para o canto
+const homeUrl = useState<string>('homeUrl')
+watch([view, filesPath, currentJobId, homeUrl], () => {
+  if (lyricsOpen.value && !lyricsMini.value) lyricsMini.value = true
 })
+
+// título da aba/janela: o que está tocando; parado, só "TuneGrab"
+const windowTitle = computed(() => {
+  const cur = player.current.value
+  if (cur && player.playing.value) return `${cur.title}${cur.artist ? ` · ${cur.artist}` : ''} — TuneGrab`
+  return 'TuneGrab' // parado: só o nome (a tela atual já aparece no próprio app)
+})
+useHead({ title: windowTitle })
 
 // clicou na música do player: depois de abrir a tela de origem, rola até a linha dela e pisca
 watch(player.revealReq, async (req) => {
@@ -68,6 +69,12 @@ const devices = computed(() => locations.value.filter(l => l.kind !== 'folder'))
 </script>
 
 <template>
+  <!-- barra de título do programa instalado (na cor do app; arrastar move a janela).
+       Só ocupa espaço quando o Windows põe os botões da janela por cima (programa / app instalado) -->
+  <div class="titlebar" aria-hidden="true">
+    <img src="/logo.svg" alt="" class="tb-logo">
+    <span class="ellipsis tb-title">{{ windowTitle }}</span>
+  </div>
   <div class="shell">
     <aside class="sidebar">
       <nav class="panel nav">
@@ -192,7 +199,18 @@ const devices = computed(() => locations.value.filter(l => l.kind !== 'folder'))
   grid-template-rows: minmax(0, 1fr) auto;
   gap: 8px;
   padding: 8px;
+  /* programa instalado: abre espaço para a barra de título (no navegador o valor é 0) */
+  padding-top: max(8px, env(titlebar-area-height, 0px));
 }
+.titlebar {
+  position: fixed; z-index: 100; top: env(titlebar-area-y, 0); left: env(titlebar-area-x, 0);
+  width: env(titlebar-area-width, 0); height: env(titlebar-area-height, 0); overflow: hidden;
+  display: flex; align-items: center; gap: 8px; padding: 0 12px;
+  background: var(--bg); color: var(--muted); font-size: 12px; font-weight: 600;
+  app-region: drag; -webkit-app-region: drag; user-select: none;
+}
+.tb-logo { width: 14px; height: 17px; flex: none; }
+.tb-title { min-width: 0; }
 .panel { background: var(--panel); border-radius: var(--radius); }
 .sidebar { display: flex; flex-direction: column; gap: 8px; min-height: 0; grid-column: 1; grid-row: 1; }
 .nav { padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }

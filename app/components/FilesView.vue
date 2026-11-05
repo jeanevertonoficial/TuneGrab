@@ -157,6 +157,44 @@ const breadcrumb = computed(() => {
 
 const title = computed(() => breadcrumb.value.at(-1)?.name ?? '')
 const totalDuration = computed(() => files.value.reduce((a, f) => a + (f.duration ?? 0), 0))
+// ---- pasta de um artista (ex.: "Gerson Rufino"): foto do canal, link e novidades dele ----
+interface Artist { id: string, name: string, url: string, avatar: string | null, subscribers: number | null }
+const artist = ref<Artist | null>(null)
+const avatarBroken = ref(false)
+const plain = (s: string) => s.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+
+/** é pasta de artista se as músicas dela têm o nome da pasta (no título, artista ou arquivo) */
+const artistName = computed(() => {
+  const l = listing.value
+  const name = title.value
+  if (!l?.parent || !name || plain(name).length < 3 || !files.value.length) return null
+  const key = plain(name)
+  const hits = files.value.filter(f => [f.title, f.artist, f.name].some(v => v && plain(v).includes(key))).length
+  return hits >= Math.min(2, files.value.length) ? name : null
+})
+watch(artistName, async (name) => {
+  artist.value = null
+  avatarBroken.value = false
+  if (!name) return
+  const found = await $fetch<Artist | null>('/api/artist', { query: { name } }).catch(() => null)
+  if (artistName.value === name) artist.value = found
+}, { immediate: true })
+
+const formatSubs = (n: number) => n >= 1e6 ? `${(n / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} mi` : n >= 1e3 ? `${Math.round(n / 1e3)} mil` : String(n)
+
+/** novidades do artista na tela Baixar, já salvando nesta pasta (sem criar subpasta) */
+function goDownloadHere(link: string) {
+  useState<string | null>('destination').value = filesPath.value
+  useState('subfolder').value = false
+  // a tela Baixar lê o destino salvo ao abrir: grava lá também (senão voltaria o anterior)
+  try { localStorage.setItem('tunegrab:dest', JSON.stringify({ path: filesPath.value, subfolder: false })) }
+  catch {}
+  useState<string | null>('openLink').value = link
+  view.value = 'home'
+}
+const artistSearch = () => artist.value && goDownloadHere(artist.value.name)
+const artistChannel = () => artist.value && goDownloadHere(artist.value.url)
+
 const usedPct = computed(() => {
   const l = listing.value?.location
   return l?.size && l.free != null ? Math.round(((l.size - l.free) / l.size) * 100) : null
@@ -202,18 +240,24 @@ const usedPct = computed(() => {
     <template v-else>
       <p v-if="error" class="error"><Icon name="error" :size="18" /> {{ error }}</p>
 
-      <header v-if="listing" class="hero">
-        <div class="hero-icon" :class="listing.location?.kind">
+      <header v-if="listing" class="hero" :class="{ artist: !!artist }">
+        <!-- pasta de um artista: a foto do canal dele -->
+        <img v-if="artist?.avatar && !avatarBroken" :src="artist.avatar" alt="" class="hero-avatar" referrerpolicy="no-referrer" @error="avatarBroken = true">
+        <div v-else class="hero-icon" :class="listing.location?.kind">
           <Icon :name="listing.parent ? 'folder' : locationIcon(listing.location?.kind ?? 'folder')" :size="96" />
         </div>
         <div class="hero-info">
-          <span class="kind">{{ listing.parent ? 'Pasta' : { removable: 'Pendrive', disk: 'Disco', network: 'Unidade de rede', folder: 'Pasta' }[listing.location?.kind ?? 'folder'] }}</span>
+          <span class="kind">
+            <template v-if="artist"><Icon name="check" :size="14" class="verified" /> Artista · pasta</template>
+            <template v-else>{{ listing.parent ? 'Pasta' : { removable: 'Pendrive', disk: 'Disco', network: 'Unidade de rede', folder: 'Pasta' }[listing.location?.kind ?? 'folder'] }}</template>
+          </span>
           <h1 class="ellipsis">{{ title }}</h1>
           <p class="meta">
             <span>{{ listing.folders.length }} pasta{{ listing.folders.length === 1 ? '' : 's' }}</span> •
             <span>{{ files.length }} música{{ files.length === 1 ? '' : 's' }}</span>
             <template v-if="totalDuration"> • <span>{{ formatDuration(totalDuration) }}</span></template>
             <template v-if="listing.location?.free != null"> • <span>{{ formatBytes(listing.location.free) }} livres</span></template>
+            <template v-if="artist?.subscribers"> • <span>{{ formatSubs(artist.subscribers) }} inscritos no YouTube</span></template>
           </p>
           <span v-if="usedPct != null" class="meter usage" :title="`${usedPct}% usado`"><i :style="{ width: `${usedPct}%` }" /></span>
         </div>
@@ -222,6 +266,19 @@ const usedPct = computed(() => {
       <div v-if="listing" class="actions">
         <button class="btn-green big" :disabled="!files.length" title="Tocar tudo" @click="playAll()"><Icon name="play" :size="28" /></button>
         <button class="icon-btn" :disabled="!files.length" title="Tocar em ordem aleatória" @click="playAll(true)"><Icon name="shuffle" :size="28" /></button>
+        <!-- pasta de artista: novidades dele, salvando direto nesta pasta -->
+        <template v-if="artist">
+          <button class="btn-ghost artist-btn" title="Busca as músicas do artista: ouça, marque para a pré-lista e baixe nesta pasta" @click="artistSearch">
+            <Icon name="search" :size="16" /> Músicas do artista
+          </button>
+          <button class="btn-ghost" title="Todos os vídeos do canal (Vídeos, Shorts, Ao vivo), para baixar nesta pasta" @click="artistChannel">
+            <Icon name="library" :size="16" /> Todos os vídeos do canal
+          </button>
+          <a class="btn-ghost" :href="artist.url" target="_blank" rel="noopener" title="Abre o canal no YouTube">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="#f00" d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.3 5 12 5 12 5s-6.3 0-7.8.4a2.5 2.5 0 0 0-1.8 1.8C2 8.7 2 12 2 12s0 3.3.4 4.8c.2.9.9 1.6 1.8 1.8C5.7 19 12 19 12 19s6.3 0 7.8-.4c.9-.2 1.6-.9 1.8-1.8.4-1.5.4-4.8.4-4.8s0-3.3-.4-4.8Z" /><path fill="#fff" d="m10 15 5.2-3L10 9v6Z" /></svg>
+            Canal no YouTube
+          </a>
+        </template>
         <button class="btn-ghost" @click="newFolder"><Icon name="folderPlus" :size="16" /> Nova pasta</button>
         <button class="btn-ghost" title="Procura músicas nesta pasta e em todas as subpastas" @click="scanHere"><Icon name="search" :size="16" /> Procurar músicas aqui</button>
         <button v-if="listing.location?.kind === 'removable' && !listing.parent" class="btn-ghost danger-ghost" @click="formatTarget = listing.location.path">
@@ -304,6 +361,12 @@ const usedPct = computed(() => {
 .hero-icon.removable { background: linear-gradient(135deg, #1ed760, #0f7a37); color: #000; }
 .hero-icon.disk { background: linear-gradient(135deg, #535353, #282828); color: #ddd; }
 .hero-icon.network { background: linear-gradient(135deg, #0d73ec, #083e80); color: #fff; }
+/* pasta de artista: foto do canal redonda, como a página de artista */
+.hero.artist { background: linear-gradient(#2d4a3a, #121212); }
+.hero-avatar { width: 192px; height: 192px; flex: none; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 60px rgba(0, 0, 0, .5); }
+.verified { color: #3d91ff; vertical-align: -2px; }
+.artist-btn { border-color: var(--green); color: #fff; }
+a.btn-ghost { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
 .hero-info { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .kind { font-size: 14px; font-weight: 500; }
 .hero h1 { margin: 0; font-size: clamp(32px, 5vw, 64px); font-weight: 800; letter-spacing: -2px; line-height: 1.1; }
@@ -335,6 +398,6 @@ const usedPct = computed(() => {
 
 @media (max-width: 860px) {
   .hero { flex-direction: column; align-items: flex-start; }
-  .hero-icon { width: 128px; height: 128px; }
+  .hero-icon, .hero-avatar { width: 128px; height: 128px; }
 }
 </style>
